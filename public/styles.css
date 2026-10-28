@@ -75,7 +75,7 @@ h2 { margin-bottom: 0; font: 400 30px Georgia, "Times New Roman", serif; }
 .forecast-header { display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 11px; }
 h3 { margin: 0; font-size: 14px; }
 .forecast-header > span { color: var(--muted); font-size: 10px; }
-.forecast-row { min-height: 43px; display: grid; grid-template-columns: 58px minmax(110px, 1fr) 70px 72px; align-items: center; gap: 8px; border-top: 1px solid #e8ece6; font-size: 11px; }
+.forecast-row { min-height: 43px; display: grid; grid-template-columns: 58px minmax(110px, 1fr) 70px 72px 28px; align-items: center; gap: 8px; border-top: 1px solid #e8ece6; font-size: 11px; }
 .forecast-day { font-weight: 750; }
 .forecast-condition { min-width: 0; display: flex; align-items: center; gap: 8px; color: var(--muted); }
 .forecast-condition > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -84,6 +84,7 @@ h3 { margin: 0; font-size: 14px; }
 .forecast-temperature { display: flex; justify-content: flex-end; gap: 9px; white-space: nowrap; }
 .forecast-temperature strong { font-size: 12px; }
 .forecast-temperature span { color: #89938b; }
+.forecast-score { color: var(--green); font-size: 15px; font-weight: 800; text-align: right; }
 .source-note { margin: 11px 0 0; color: #879188; font-size: 10px; text-align: right; }
 .page-footer { width: min(1050px, calc(100% - 44px)); margin: 38px auto 0; padding: 15px 0 23px; display: flex; justify-content: space-between; border-top: 1px solid rgb(29 48 40 / 12%); color: var(--muted); font-size: 10px; }
 .page-footer span:first-child { color: var(--green); font-weight: 800; }
@@ -99,7 +100,7 @@ h3 { margin: 0; font-size: 14px; }
   .today-panel { min-height: unset; }
   .current-weather { padding: 15px 0 18px; }
   .forecast-panel { padding-right: 13px; padding-left: 13px; }
-  .forecast-row { grid-template-columns: 48px minmax(90px, 1fr) 62px 62px; gap: 5px; font-size: 10px; }
+  .forecast-row { grid-template-columns: 48px minmax(90px, 1fr) 62px 62px 24px; gap: 5px; font-size: 10px; }
   .forecast-condition { gap: 4px; }
   .forecast-rain { font-size: 9px; }
   .forecast-temperature { gap: 5px; }
@@ -108,7 +109,7 @@ h3 { margin: 0; font-size: 14px; }
 }
 @media (max-width: 380px) {
   .page-shell, .page-footer { width: calc(100% - 32px); }
-  .forecast-row { grid-template-columns: 42px minmax(76px, 1fr) 54px 58px; gap: 3px; }
+  .forecast-row { grid-template-columns: 42px minmax(76px, 1fr) 54px 58px 20px; gap: 3px; }
   .forecast-symbol { width: 14px; }
   .forecast-condition { font-size: 9px; }
 }

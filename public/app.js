@@ -33,6 +33,17 @@ function locationLabel(place) {
     .join(", ");
 }
 
+function scoreRideWeather(temperature, wind, rainChance) {
+  let score = temperature >= 18 ? 10 : temperature >= 15 ? 9 : temperature >= 12 ? 7 : temperature >= 9 ? 5 : temperature >= 5 ? 3 : 1;
+  if (wind > 30) score -= 3;
+  else if (wind > 20) score -= 2;
+  else if (wind > 10) score -= 1;
+  if (rainChance > 60) score -= 3;
+  else if (rainChance > 30) score -= 2;
+  else if (rainChance > 10) score -= 1;
+  return Math.max(1, Math.min(10, score));
+}
+
 function renderForecast(data) {
   const { current, daily } = data.forecast;
   const [description, icon] = describeWeather(current.weather_code);
@@ -74,6 +85,19 @@ function renderForecast(data) {
     low.textContent = formatTemperature(daily.temperature_2m_min[index]);
     temperature.append(high, low);
     row.append(day, weather, rain, temperature);
+    const rideScore = document.createElement("span");
+    rideScore.className = "forecast-score";
+    if (index < 2) {
+      const score = scoreRideWeather(
+        daily.temperature_2m_max[index],
+        daily.wind_speed_10m_max[index],
+        daily.precipitation_probability_max[index] ?? 0,
+      );
+      rideScore.textContent = String(score);
+      rideScore.setAttribute("aria-label", `Cycling score: ${score} out of 10`);
+      rideScore.title = `Cycling score: ${score} out of 10`;
+    }
+    row.append(rideScore);
     return row;
   }));
   results.hidden = false;

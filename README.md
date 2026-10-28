@@ -18,14 +18,13 @@ Run the syntax checks with `npm run check`.
 
 ## Deploy to Fly.io
 
-Install and sign in to the [Fly CLI](https://fly.io/docs/flyctl/install/), then run from this directory:
+Install and sign in to the [Fly CLI](https://fly.io/docs/flyctl/install/), then deploy from this directory:
 
 ```sh
-fly launch --no-deploy
 fly deploy
 ```
 
-The included `fly.toml` uses the Amsterdam region and app name `fietsweer-jhnvdk`. Change its `app` value if that name is already taken. Fly builds the included Dockerfile; no secrets or environment variables are needed.
+The included `fly.toml` targets the existing app `fietsweer` in the Amsterdam region. Fly builds the included Dockerfile; no secrets or environment variables are needed.
 
 ## GitHub
 
