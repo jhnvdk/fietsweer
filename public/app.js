@@ -4,7 +4,7 @@ const statusMessage = document.querySelector("#status-message");
 const results = document.querySelector("#weather-results");
 
 function formatDay(date, options) {
-  return new Intl.DateTimeFormat(undefined, options).format(new Date(`${date}T12:00:00`));
+  return new Intl.DateTimeFormat("nl-NL", options).format(new Date(`${date}T12:00:00`));
 }
 
 function locationLabel(place) {
@@ -27,27 +27,37 @@ function scoreRideWeather(temperature, wind, rainChance) {
 function renderForecast(data) {
   const { daily } = data.forecast;
   document.querySelector("#place-name").textContent = locationLabel(data.place);
-  document.querySelector("#score-list").replaceChildren(...daily.time.map((date, index) => {
+  const dayHeadings = daily.time.map((date) => {
+    const heading = document.createElement("th");
+    heading.scope = "col";
+    heading.textContent = formatDay(date, { weekday: "short" }).replace(/\.$/, "");
+    return heading;
+  });
+  document.querySelector("#score-days").replaceChildren(
+    document.querySelector(".activity-heading"),
+    ...dayHeadings,
+  );
+  const scores = daily.time.map((date, index) => {
     const score = scoreRideWeather(
       daily.temperature_2m_max[index],
       daily.wind_speed_10m_max[index],
       daily.precipitation_probability_max[index] ?? 0,
     );
-    const card = document.createElement("article");
-    card.className = "score-card";
-    const day = document.createElement("span");
-    day.className = "score-day";
-    day.textContent = index === 0 ? "Today" : "Tomorrow";
-    const dateLabel = document.createElement("span");
-    dateLabel.className = "score-date";
-    dateLabel.textContent = formatDay(date, { weekday: "long", month: "short", day: "numeric" });
+    const cell = document.createElement("td");
     const value = document.createElement("strong");
     value.className = "score-value";
-    value.setAttribute("aria-label", `Ride score: ${score} out of 10`);
+    if (score < 6) value.classList.add("is-low");
+    else if (score < 8) value.classList.add("is-medium");
+    value.setAttribute("aria-label", `Fietsscore: ${score} van de 10`);
     value.textContent = String(score);
-    card.append(day, dateLabel, value);
-    return card;
-  }));
+    cell.setAttribute("aria-label", `${formatDay(date, { weekday: "long" })}: ${score} van 10`);
+    cell.append(value);
+    return cell;
+  });
+  document.querySelector("#cycling-scores").replaceChildren(
+    document.querySelector(".activity-name"),
+    ...scores,
+  );
   results.hidden = false;
 }
 
@@ -57,7 +67,7 @@ form.addEventListener("submit", async (event) => {
   if (!location) return;
   const button = form.querySelector("button");
   button.disabled = true;
-  button.querySelector("span:first-child").textContent = "Checking…";
+  button.querySelector("span:first-child").textContent = "Bezig…";
   statusMessage.textContent = "";
   statusMessage.classList.remove("is-error");
   results.hidden = true;
@@ -72,6 +82,6 @@ form.addEventListener("submit", async (event) => {
     statusMessage.classList.add("is-error");
   } finally {
     button.disabled = false;
-    button.querySelector("span:first-child").textContent = "Show ride score";
+    button.querySelector("span:first-child").textContent = "Toon fietsscore";
   }
 });
