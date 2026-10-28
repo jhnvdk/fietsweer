@@ -1,0 +1,12 @@
+{
+  "name": "fietsweer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A five-day weather outlook for your next ride",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "check": "node --check server.js && node --check public/app.js"
+  },
+  "engines": { "node": ">=20" }
+}
