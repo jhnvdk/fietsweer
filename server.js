@@ -23,9 +23,8 @@ async function getForecast(location) {
   forecastUrl.search = new URLSearchParams({
     latitude: String(place.latitude),
     longitude: String(place.longitude),
-    current: "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day",
-    daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max",
-    forecast_days: "5",
+    daily: "temperature_2m_max,precipitation_probability_max,wind_speed_10m_max",
+    forecast_days: "2",
     timezone: "auto",
   });
   const forecastResponse = await fetch(forecastUrl, { signal: AbortSignal.timeout(10000) });
