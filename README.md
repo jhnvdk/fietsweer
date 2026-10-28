@@ -1,6 +1,6 @@
 # Fietsweer
 
-A responsive weather site for choosing the next good day to ride. Enter a city to see current conditions and a five-day outlook, including high and low temperatures, rain chance, and wind.
+A responsive cycling weather app. Choose a place to see its ride score for today and tomorrow.
 
 Weather and geocoding data come from [Open-Meteo](https://open-meteo.com/). No API key or application dependencies are required. The server uses Node.js built-in HTTP and `fetch` APIs.
 
