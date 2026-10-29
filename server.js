@@ -19,14 +19,16 @@ async function getForecast(location) {
   const place = (await geocodingResponse.json()).results?.[0];
   if (!place) return null;
 
-  const forecastUrl = new URL("https://api.open-meteo.com/v1/forecast");
+  const apiKey = process.env.INFOPLAZA_API_KEY;
+
+  const forecastUrl = new URL("https://api.infoplaza.com/v1/weather/forecast");
   forecastUrl.search = new URLSearchParams({
-    latitude: String(place.latitude),
-    longitude: String(place.longitude),
-    current: "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day",
-    daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max",
-    forecast_days: "5",
-    timezone: "auto",
+    lat: String(place.latitude),
+    lon: String(place.longitude),
+    api_key: apiKey,
+    units: "metric",
+    max_daily: "5",
+    language: "en",
   });
   const forecastResponse = await fetch(forecastUrl, { signal: AbortSignal.timeout(10000) });
   if (!forecastResponse.ok) throw new Error("The forecast is temporarily unavailable.");
@@ -58,6 +60,10 @@ const server = http.createServer(async (request, response) => {
     const location = requestUrl.searchParams.get("location")?.trim();
     if (!location || location.length > 100) {
       sendJson(response, 400, { error: "Enter a location up to 100 characters long." });
+      return;
+    }
+    if (!process.env.INFOPLAZA_API_KEY) {
+      sendJson(response, 503, { error: "Forecast setup is incomplete. Configure INFOPLAZA_API_KEY and restart the server." });
       return;
     }
     try {

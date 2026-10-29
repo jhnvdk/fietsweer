@@ -2,17 +2,19 @@
 
 A responsive weather site for choosing the next good day to ride. Enter a city to see current conditions and a five-day outlook, including high and low temperatures, rain chance, and wind.
 
-Weather and geocoding data come from [Open-Meteo](https://open-meteo.com/). No API key or application dependencies are required. The server uses Node.js built-in HTTP and `fetch` APIs.
+Weather data comes from [Infoplaza](https://platform.infoplaza.com/reference/v1-weather-forecast), and location search uses [Open-Meteo](https://open-meteo.com/). The server uses Node.js built-in HTTP and `fetch` APIs.
 
 ## Run locally
 
-Requires Node.js 20 or newer.
+Requires Node.js 20.18 or newer.
 
 ```sh
 npm start
 ```
 
-Open http://localhost:8080. For automatic restarts while editing, run `npm run dev`.
+Put `INFOPLAZA_API_KEY=your_api_key` in the ignored `.env` file. Both `npm start` and `npm run dev` load it automatically. Open http://localhost:8080.
+
+On Fly.io, the app reads `INFOPLAZA_API_KEY` from the existing Fly secret; no local `.env` file is needed in the image.
 
 Run the syntax checks with `npm run check`.
 
@@ -24,7 +26,7 @@ Install and sign in to the [Fly CLI](https://fly.io/docs/flyctl/install/), then 
 fly deploy
 ```
 
-The included `fly.toml` targets the existing app `fietsweer` in the Amsterdam region. Fly builds the included Dockerfile; no secrets or environment variables are needed.
+The included `fly.toml` targets the existing app `fietsweer` in the Amsterdam region. Fly builds the included Dockerfile and injects its configured secrets at runtime.
 
 ## GitHub
 

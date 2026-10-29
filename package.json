@@ -4,9 +4,9 @@
   "private": true,
   "description": "A five-day weather outlook for your next ride",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js",
+    "start": "node --env-file-if-exists=.env server.js",
+    "dev": "node --env-file-if-exists=.env --watch server.js",
     "check": "node --check server.js && node --check public/app.js"
   },
-  "engines": { "node": ">=20" }
+  "engines": { "node": ">=20.18" }
 }

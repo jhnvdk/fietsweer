@@ -4,27 +4,23 @@ const statusMessage = document.querySelector("#status-message");
 const results = document.querySelector("#weather-results");
 const forecastList = document.querySelector("#forecast-list");
 
-const weatherDescriptions = {
-  0: ["Clear sky", "☀"], 1: ["Mostly clear", "🌤"], 2: ["Partly cloudy", "⛅"], 3: ["Overcast", "☁"],
-  45: ["Foggy", "〰"], 48: ["Rime fog", "〰"], 51: ["Light drizzle", "☂"], 53: ["Drizzle", "☂"],
-  55: ["Heavy drizzle", "☂"], 56: ["Freezing drizzle", "❄"], 57: ["Freezing drizzle", "❄"],
-  61: ["Light rain", "☂"], 63: ["Rain", "☂"], 65: ["Heavy rain", "☂"], 66: ["Freezing rain", "❄"],
-  67: ["Freezing rain", "❄"], 71: ["Light snow", "❄"], 73: ["Snow", "❄"], 75: ["Heavy snow", "❄"],
-  77: ["Snow grains", "❄"], 80: ["Light showers", "☂"], 81: ["Rain showers", "☂"],
-  82: ["Heavy showers", "☂"], 85: ["Snow showers", "❄"], 86: ["Heavy snow showers", "❄"],
-  95: ["Thunderstorm", "ϟ"], 96: ["Thunderstorm, hail", "ϟ"], 99: ["Thunderstorm, hail", "ϟ"],
-};
-
-function describeWeather(code) {
-  return weatherDescriptions[code] || ["Conditions unavailable", "·"];
+function describeConditions(cloudCover, precipIntensity, precipProbability = 0, precipType = "rain") {
+  if (precipIntensity >= 0.1 || (precipProbability >= 0.6 && precipIntensity > 0)) {
+    const winterWeather = ["snow", "sleet", "hail"].includes(precipType);
+    return [winterWeather ? `${precipType[0].toUpperCase()}${precipType.slice(1)} possible` : "Rain possible", winterWeather ? "❄" : "☂"];
+  }
+  if (cloudCover >= 0.8) return ["Overcast", "☁"];
+  if (cloudCover >= 0.45) return ["Partly cloudy", "⛅"];
+  if (cloudCover >= 0.15) return ["Mostly clear", "🌤"];
+  return ["Clear", "☀"];
 }
 
 function formatTemperature(value) {
   return `${Math.round(value)}°`;
 }
 
-function formatDay(date, options) {
-  return new Intl.DateTimeFormat(undefined, options).format(new Date(`${date}T12:00:00`));
+function formatDay(timestamp, timezone, options) {
+  return new Intl.DateTimeFormat(undefined, { ...options, timeZone: timezone }).format(new Date(timestamp * 1000));
 }
 
 function locationLabel(place) {
@@ -33,38 +29,41 @@ function locationLabel(place) {
     .join(", ");
 }
 
-function scoreRideWeather(temperature, wind, rainChance) {
-  let score = temperature >= 18 ? 10 : temperature >= 15 ? 9 : temperature >= 12 ? 7 : temperature >= 9 ? 5 : temperature >= 5 ? 3 : 1;
-  if (wind > 30) score -= 3;
-  else if (wind > 20) score -= 2;
-  else if (wind > 10) score -= 1;
-  if (rainChance > 60) score -= 3;
-  else if (rainChance > 30) score -= 2;
-  else if (rainChance > 10) score -= 1;
-  return Math.max(1, Math.min(10, score));
+function scoreRideWeather(temperature, wind, rainProbability, rainIntensity, precipType) {
+  let penalty = temperature < 10 || temperature > 32 ? 3
+    : temperature < 14 || temperature > 28 ? 2
+      : temperature < 16 || temperature > 24 ? 1
+        : 0;
+  penalty += Math.round(Math.min(4, 3 * rainProbability + 1.5 * Math.min(rainIntensity / 2, 1)));
+
+  let windPenalty = wind >= 35 ? 3 : wind >= 25 ? 2 : wind >= 15 ? 1 : 0;
+  if (["snow", "sleet", "hail"].includes(precipType) && (rainProbability >= 0.2 || rainIntensity > 0.1)) penalty += 2;
+  if (temperature <= 0 && rainIntensity > 0.1) penalty += 1;
+  penalty += windPenalty;
+  return Math.max(1, Math.min(10, 10 - penalty));
 }
 
 function renderForecast(data) {
-  const { current, daily } = data.forecast;
-  const [description, icon] = describeWeather(current.weather_code);
-  const currentDate = current.time.slice(0, 10);
+  const { currently: current, daily } = data.forecast;
+  const timezone = data.forecast.timezone || data.place.timezone || "UTC";
+  const [description, icon] = describeConditions(current.cloudCover, current.precipIntensity);
   document.querySelector("#place-name").textContent = locationLabel(data.place);
-  document.querySelector("#forecast-dates").textContent = `${formatDay(daily.time[0], { month: "short", day: "numeric" })} – ${formatDay(daily.time[4], { month: "short", day: "numeric" })}`;
-  document.querySelector("#current-day").textContent = formatDay(currentDate, { weekday: "long" });
+  document.querySelector("#forecast-dates").textContent = `${formatDay(daily[0].time, timezone, { month: "short", day: "numeric" })} – ${formatDay(daily.at(-1).time, timezone, { month: "short", day: "numeric" })}`;
+  document.querySelector("#current-day").textContent = formatDay(current.time, timezone, { weekday: "long" });
   document.querySelector("#current-icon").textContent = icon;
-  document.querySelector("#current-temp").textContent = formatTemperature(current.temperature_2m);
+  document.querySelector("#current-temp").textContent = formatTemperature(current.temperature);
   document.querySelector("#current-description").textContent = description;
-  document.querySelector("#feels-like").textContent = formatTemperature(current.apparent_temperature);
-  document.querySelector("#current-wind").textContent = `${Math.round(current.wind_speed_10m)} km/h`;
-  document.querySelector("#humidity").textContent = `${current.relative_humidity_2m}%`;
+  document.querySelector("#feels-like").textContent = formatTemperature(current.apparentTemperature);
+  document.querySelector("#current-wind").textContent = `${Math.round(current.windSpeed)} km/h`;
+  document.querySelector("#humidity").textContent = `${Math.round(current.humidity * 100)}%`;
 
-  forecastList.replaceChildren(...daily.time.map((date, index) => {
-    const [dayDescription, dayIcon] = describeWeather(daily.weather_code[index]);
+  forecastList.replaceChildren(...daily.map((dayData, index) => {
+    const [dayDescription, dayIcon] = describeConditions(dayData.cloudCover, dayData.precipIntensity, dayData.precipProbability, dayData.precipType);
     const row = document.createElement("article");
     row.className = "forecast-row";
     const day = document.createElement("span");
     day.className = "forecast-day";
-    day.textContent = index === 0 ? "Today" : formatDay(date, { weekday: "short" });
+    day.textContent = index === 0 ? "Today" : formatDay(dayData.time, timezone, { weekday: "short" });
     const weather = document.createElement("span");
     weather.className = "forecast-condition";
     const symbol = document.createElement("span");
@@ -76,27 +75,21 @@ function renderForecast(data) {
     weather.append(symbol, label);
     const rain = document.createElement("span");
     rain.className = "forecast-rain";
-    rain.textContent = `${daily.precipitation_probability_max[index] ?? 0}% rain`;
+    rain.textContent = `${Math.round(dayData.precipProbability * 100)}% rain`;
     const temperature = document.createElement("span");
     temperature.className = "forecast-temperature";
     const high = document.createElement("strong");
-    high.textContent = formatTemperature(daily.temperature_2m_max[index]);
+    high.textContent = formatTemperature(dayData.temperatureHigh);
     const low = document.createElement("span");
-    low.textContent = formatTemperature(daily.temperature_2m_min[index]);
+    low.textContent = formatTemperature(dayData.temperatureLow);
     temperature.append(high, low);
     row.append(day, weather, rain, temperature);
     const rideScore = document.createElement("span");
     rideScore.className = "forecast-score";
-    if (index < 2) {
-      const score = scoreRideWeather(
-        daily.temperature_2m_max[index],
-        daily.wind_speed_10m_max[index],
-        daily.precipitation_probability_max[index] ?? 0,
-      );
-      rideScore.textContent = String(score);
-      rideScore.setAttribute("aria-label", `Cycling score: ${score} out of 10`);
-      rideScore.title = `Cycling score: ${score} out of 10`;
-    }
+    const score = scoreRideWeather(dayData.apparentTemperature, dayData.windSpeed, dayData.precipProbability, dayData.precipIntensity, dayData.precipType);
+    rideScore.textContent = String(score);
+    rideScore.setAttribute("aria-label", `Cycling score: ${score} out of 10`);
+    rideScore.title = `Cycling score: ${score} out of 10`;
     row.append(rideScore);
     return row;
   }));
