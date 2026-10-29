@@ -2,7 +2,7 @@
   "name": "fietsweer",
   "version": "1.0.0",
   "private": true,
-  "description": "A five-day weather outlook for your next ride",
+  "description": "Five-day cycling scores based on Infoplaza weather",
   "scripts": {
     "start": "node --env-file-if-exists=.env server.js",
     "dev": "node --env-file-if-exists=.env --watch server.js",

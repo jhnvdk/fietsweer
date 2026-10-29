@@ -41,7 +41,6 @@ function renderForecast(data) {
     document.querySelector(".activity-heading"),
     ...dayHeadings,
   );
-
   const scores = daily.map((dayData) => {
     const score = scoreRideWeather(dayData.apparentTemperature, dayData.windSpeed, dayData.precipProbability, dayData.precipIntensity, dayData.precipType);
     const cell = document.createElement("td");
