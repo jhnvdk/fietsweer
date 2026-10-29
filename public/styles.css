@@ -68,16 +68,21 @@ button, input { font: inherit; }
   .search-row button { width: 100%; }
   .results-heading { align-items: end; margin-bottom: 20px; }
   .place-name { font-size: 20px; }
-  .activity-table thead th { height: 58px; font-size: 18px; }
-  .activity-table tbody th { height: 140px; }
-  .activity-name { gap: 14px; font-size: 24px; }
-  .bike-icon { width: 44px; }
-  .score-value { width: 58px; height: 58px; font-size: 32px; }
+  .activity-table { min-width: 0; display: block; }
+  .activity-table thead, .activity-table tbody { display: block; }
+  .activity-table tr { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .activity-table thead .activity-heading { display: none; }
+  .activity-table thead th { height: 58px; padding: 0 2px; font-size: clamp(13px, 3.6vw, 18px); }
+  .activity-table tbody th { height: auto; }
+  .activity-name { grid-column: 1 / -1; justify-content: center; gap: 12px; padding: 18px 4px 8px; border-bottom: 0; font-size: 20px; }
+  .bike-icon { width: 38px; }
+  .activity-table td { min-width: 0; display: grid; place-items: center; padding: 12px 0 16px; }
+  .score-value { width: clamp(36px, 11vw, 48px); height: clamp(36px, 11vw, 48px); font-size: clamp(22px, 6vw, 28px); }
 }
 @media (max-width: 380px) {
   .page-shell { padding-right: 16px; padding-left: 16px; }
-  .activity-table { min-width: 520px; }
-  .activity-table thead .activity-heading { width: 31%; }
-  .activity-name { gap: 10px; font-size: 21px; }
-  .bike-icon { width: 38px; }
+  .activity-table thead th { font-size: 12px; }
+  .activity-name { gap: 8px; font-size: 18px; }
+  .bike-icon { width: 32px; }
+  .score-value { width: 34px; height: 34px; font-size: 20px; }
 }
