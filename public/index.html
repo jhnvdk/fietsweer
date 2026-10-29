@@ -21,7 +21,7 @@
               <span class="pin-icon" aria-hidden="true">⌖</span>
               <input id="location-input" name="location" type="search" placeholder="Plaats of stad" autocomplete="address-level2" maxlength="100" required>
             </div>
-            <button type="submit"><span class="button-label">Toon fietsscore</span><span class="button-arrow" aria-hidden="true">↗</span></button>
+            <button type="submit"><span class="button-label">Toon fietsweer</span><span class="button-arrow" aria-hidden="true">↗</span></button>
             <div class="location-actions">
               <button id="current-location-button" class="current-location-button" type="button">
                 <span class="location-button-icon" aria-hidden="true">⌖</span>
@@ -41,15 +41,9 @@
           <p id="place-name" class="place-name"></p>
         </div>
         <div class="activity-table-wrap">
-          <table class="activity-table">
-            <thead><tr id="score-days"><th scope="col" class="activity-heading"></th></tr></thead>
-            <tbody><tr id="cycling-scores"><th scope="row" class="activity-name">
-              <svg class="bike-icon" viewBox="0 0 64 44" aria-hidden="true">
-                <circle cx="13" cy="31" r="10"></circle><circle cx="51" cy="31" r="10"></circle>
-                <path d="m13 31 12-18 10 18H13l9-13h16l13 13M25 13h-7m14 0h8l5 8"></path>
-              </svg>
-              <span>Fietsen</span>
-            </th></tr></tbody>
+          <table class="activity-table" aria-label="Fietsscores per dag">
+            <thead><tr id="score-days"></tr></thead>
+            <tbody><tr id="cycling-scores" aria-label="Fietsscore"></tr></tbody>
           </table>
         </div>
         <p class="source-note">Weerdata door Infoplaza</p>

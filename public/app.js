@@ -238,10 +238,7 @@ function renderForecast(data) {
     heading.textContent = formatDay(dayData.time, timezone, { weekday: "short" }).replace(/\.$/, "");
     return heading;
   });
-  document.querySelector("#score-days").replaceChildren(
-    document.querySelector(".activity-heading"),
-    ...dayHeadings,
-  );
+  document.querySelector("#score-days").replaceChildren(...dayHeadings);
   const scores = daily.map((dayData) => {
     const score = scoreRideWeather(dayData.apparentTemperature, dayData.windSpeed, dayData.precipProbability, dayData.precipIntensity, dayData.precipType);
     const cell = document.createElement("td");
@@ -289,10 +286,7 @@ function renderForecast(data) {
     cell.append(content);
     return cell;
   });
-  document.querySelector("#cycling-scores").replaceChildren(
-    document.querySelector(".activity-name"),
-    ...scores,
-  );
+  document.querySelector("#cycling-scores").replaceChildren(...scores);
   results.hidden = false;
 }
 
