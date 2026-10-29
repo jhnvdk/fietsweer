@@ -37,8 +37,12 @@ button, input { font: inherit; }
  .search-row button:hover { background: #414861; transform: translateY(-1px); }
  .search-row button:focus-visible { outline: 3px solid #aeb6d1; outline-offset: 3px; }
  .search-row button:disabled { cursor: wait; opacity: .7; }
- .search-row .current-location-button { min-width: 190px; justify-content: center; white-space: nowrap; background: #252a3d; }
+ .location-actions { display: flex; flex: 0 0 auto; gap: 10px; }
+ .search-row .location-actions button { min-width: 0; justify-content: center; white-space: nowrap; }
+ .search-row .current-location-button { min-width: 190px; background: #252a3d; }
  .search-row .current-location-button:hover { background: #343a50; }
+ .search-row .overview-map-button { min-width: 150px; background: #252a3d; }
+ .search-row .overview-map-button:hover { background: #343a50; }
  .location-button-icon { font-size: 18px; }
  .button-arrow { color: #b7c1e1; font-size: 18px; }
  .status-message { max-width: 680px; min-height: 0; margin: 0 auto; color: var(--muted); font-size: 13px; }
@@ -79,13 +83,37 @@ button, input { font: inherit; }
 .day-weather-details dt, .day-weather-details dd { margin: 0; padding: 10px 0; border-top: 1px solid var(--line); font-size: 13px; }
 .day-weather-details dt { color: var(--muted); }
 .day-weather-details dd { text-align: right; font-weight: 650; }
+.overview-map-dialog { width: min(980px, calc(100% - 24px)); max-height: min(94vh, 880px); overflow: hidden; padding: 18px; color: var(--ink); background: var(--panel); border: 1px solid #484c5d; border-radius: 12px; }
+.overview-map-dialog::backdrop { background: rgb(8 10 18 / 76%); }
+.overview-map-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 14px; }
+.overview-map-toolbar h2 { margin: 0; font-size: 24px; }
+.overview-map-status { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+.overview-map-toolbar label { display: grid; gap: 5px; color: var(--muted); font-size: 12px; }
+.overview-map-toolbar select { min-width: 130px; height: 40px; padding: 0 10px; color: var(--ink); background: #191b28; border: 1px solid #484c5d; border-radius: 6px; font: inherit; }
+.overview-map-toolbar select:focus-visible { outline: 2px solid #aeb6d1; outline-offset: 2px; }
+.overview-map { width: 100%; height: min(68vh, 680px); min-height: 340px; border-radius: 6px; background: #dce5e2; }
+.overview-score-marker { background: transparent; border: 0; }
+.overview-score-badge { width: 44px; height: 44px; display: grid; place-items: center; color: #182332; background: var(--green); border: 3px solid #fff; border-radius: 50%; box-shadow: 0 2px 8px rgb(0 0 0 / 35%); font-size: 19px; font-weight: 800; }
+.overview-score-badge.is-medium { background: var(--green-soft); }
+.overview-score-badge.is-low { background: var(--amber); }
+.overview-map-dialog .leaflet-popup-content-wrapper { color: #202432; }
+.overview-map-dialog .leaflet-popup-content { margin: 12px 16px; }
+.overview-map-dialog .leaflet-popup-content p { margin: 5px 0 0; }
 @media (max-width: 690px) {
   .page-shell { padding: 24px 22px 40px; }
   .search-panel { padding: 18px; }
   .search-row { flex-direction: column; }
   .search-row button { width: 100%; }
+  .location-actions { width: 100%; }
+  .search-row .location-actions button { flex: 1 1 0; padding: 0 8px; font-size: 12px; }
   .results-heading { align-items: end; margin-bottom: 20px; }
   .place-name { font-size: 20px; }
+  .overview-map-dialog { padding: 14px; }
+  .overview-map-toolbar { align-items: flex-end; gap: 8px; }
+  .overview-map-toolbar h2 { font-size: 20px; }
+  .overview-map-toolbar label { font-size: 11px; }
+  .overview-map-toolbar select { min-width: 112px; max-width: 130px; font-size: 12px; }
+  .overview-map { height: min(62vh, 560px); min-height: 300px; }
   .activity-table { min-width: 0; display: block; }
   .activity-table thead, .activity-table tbody { display: block; }
   .activity-table tr { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }

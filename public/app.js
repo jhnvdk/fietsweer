@@ -4,6 +4,28 @@ const statusMessage = document.querySelector("#status-message");
 const results = document.querySelector("#weather-results");
 const currentLocationButton = document.querySelector("#current-location-button");
 const dayWeatherDialog = document.querySelector("#day-weather-dialog");
+const overviewMapButton = document.querySelector("#overview-map-button");
+const overviewMapDialog = document.querySelector("#overview-map-dialog");
+const overviewMapElement = document.querySelector("#overview-map");
+const overviewMapStatus = document.querySelector("#overview-map-status");
+const overviewMapDay = document.querySelector("#overview-map-day");
+const provincialCapitals = [
+  { province: "Groningen", name: "Groningen", latitude: 53.2194, longitude: 6.5665 },
+  { province: "Friesland", name: "Leeuwarden", latitude: 53.2012, longitude: 5.7999 },
+  { province: "Drenthe", name: "Assen", latitude: 52.9925, longitude: 6.5642 },
+  { province: "Overijssel", name: "Zwolle", latitude: 52.5168, longitude: 6.0830 },
+  { province: "Flevoland", name: "Lelystad", latitude: 52.5185, longitude: 5.4714 },
+  { province: "Gelderland", name: "Arnhem", latitude: 51.9851, longitude: 5.8987 },
+  { province: "Utrecht", name: "Utrecht", latitude: 52.0907, longitude: 5.1214 },
+  { province: "Noord-Holland", name: "Haarlem", latitude: 52.3874, longitude: 4.6462 },
+  { province: "Zuid-Holland", name: "Den Haag", latitude: 52.0705, longitude: 4.3007 },
+  { province: "Zeeland", name: "Middelburg", latitude: 51.4988, longitude: 3.6100 },
+  { province: "Noord-Brabant", name: "'s-Hertogenbosch", latitude: 51.6978, longitude: 5.3037 },
+  { province: "Limburg", name: "Maastricht", latitude: 50.8514, longitude: 5.6910 },
+];
+const overviewForecasts = new Map();
+let overviewMap;
+let overviewMapMarkers;
 
 function formatDay(timestamp, timezone, options) {
   return new Intl.DateTimeFormat("nl-NL", { ...options, timeZone: timezone }).format(new Date(timestamp * 1000));
@@ -100,6 +122,111 @@ function scoreRideWeather(temperature, wind, rainProbability, rainIntensity, pre
   penalty += windPenalty;
   return Math.max(1, Math.min(10, 10 - penalty));
 }
+
+function initializeOverviewMap() {
+  overviewMap = L.map(overviewMapElement, { scrollWheelZoom: false }).setView([52.15, 5.35], 7);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap-bijdragers</a>',
+  }).addTo(overviewMap);
+  overviewMapMarkers = L.layerGroup().addTo(overviewMap);
+}
+
+function updateOverviewMapMarkers(dayIndex) {
+  overviewMapMarkers.clearLayers();
+  const dateForecast = [...overviewForecasts.values()].find((data) => data.forecast.daily[dayIndex]);
+  if (!dateForecast) return;
+  const selectedDay = dateForecast.forecast.daily[dayIndex];
+  const selectedDate = formatDay(selectedDay.time, dateForecast.forecast.timezone || "Europe/Amsterdam", {
+    weekday: "long", day: "numeric", month: "long",
+  });
+
+  for (const capital of provincialCapitals) {
+    const data = overviewForecasts.get(capital.province);
+    const day = data?.forecast.daily[dayIndex];
+    if (!day) continue;
+    const score = scoreRideWeather(day.apparentTemperature, day.windSpeed, day.precipProbability, day.precipIntensity, day.precipType);
+    if (!Number.isFinite(score)) continue;
+    const scoreClass = score < 6 ? "is-low" : score < 8 ? "is-medium" : "";
+    const marker = L.marker([capital.latitude, capital.longitude], {
+      title: `${capital.province}, ${capital.name}: fietsscore ${score} van 10`,
+      icon: L.divIcon({
+        className: "overview-score-marker",
+        html: `<span class="overview-score-badge ${scoreClass}">${score}</span>`,
+        iconSize: [48, 48],
+        iconAnchor: [24, 24],
+      }),
+    });
+    const popup = document.createElement("div");
+    const heading = document.createElement("strong");
+    heading.textContent = `${capital.name} · ${capital.province}`;
+    const scoreText = document.createElement("p");
+    scoreText.textContent = `Fietsscore ${score} van 10 · ${selectedDate}`;
+    const weatherText = document.createElement("p");
+    weatherText.textContent = `${describeDayWeather(day)} · maximaal ${formatWeatherValue(day.temperatureHigh, " °C")}`;
+    popup.append(heading, scoreText, weatherText);
+    marker.bindPopup(popup).addTo(overviewMapMarkers);
+  }
+  overviewMapStatus.textContent = `${selectedDate} · fietsscore in ${overviewForecasts.size} van de ${provincialCapitals.length} hoofdsteden`;
+}
+
+async function loadOverviewForecasts() {
+  const missingCapitals = provincialCapitals.filter((capital) => !overviewForecasts.has(capital.province));
+  if (missingCapitals.length) {
+    overviewMapStatus.textContent = `Weer ophalen voor ${missingCapitals.length} hoofdsteden…`;
+    await Promise.all(missingCapitals.map(async (capital) => {
+      try {
+        const query = new URLSearchParams({ lat: String(capital.latitude), lon: String(capital.longitude) });
+        const response = await fetch(`/api/forecast?${query}`);
+        const data = await response.json();
+        if (!response.ok || !Array.isArray(data.forecast?.daily)) throw new Error("Forecast unavailable");
+        overviewForecasts.set(capital.province, data);
+      } catch {
+        return;
+      }
+    }));
+  }
+
+  if (overviewForecasts.size === 0) {
+    overviewMapStatus.textContent = "De weerscores konden niet worden geladen. Sluit de kaart en probeer het opnieuw.";
+    return;
+  }
+
+  const firstForecast = overviewForecasts.values().next().value.forecast;
+  overviewMapDay.replaceChildren(...firstForecast.daily.map((day, index) => {
+    const option = document.createElement("option");
+    option.value = String(index);
+    option.textContent = formatDay(day.time, firstForecast.timezone || "Europe/Amsterdam", {
+      weekday: "short", day: "numeric", month: "short",
+    });
+    return option;
+  }));
+  overviewMapDay.disabled = false;
+  updateOverviewMapMarkers(Number(overviewMapDay.value) || 0);
+}
+
+async function openOverviewMap() {
+  overviewMapDialog.showModal();
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  if (!window.L) {
+    overviewMapStatus.textContent = "De kaart kon niet worden geladen. Controleer je internetverbinding en probeer het opnieuw.";
+    return;
+  }
+  if (!overviewMap) initializeOverviewMap();
+  overviewMap.invalidateSize();
+  await loadOverviewForecasts();
+}
+
+overviewMapButton.addEventListener("click", async () => {
+  overviewMapButton.disabled = true;
+  try {
+    await openOverviewMap();
+  } finally {
+    overviewMapButton.disabled = false;
+  }
+});
+
+overviewMapDay.addEventListener("change", () => updateOverviewMapMarkers(Number(overviewMapDay.value)));
 
 function renderForecast(data) {
   const { daily } = data.forecast;

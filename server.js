@@ -120,7 +120,7 @@ const server = http.createServer(async (request, response) => {
     response.writeHead(200, {
       "Content-Type": mimeTypes[path.extname(filePath)] || "application/octet-stream",
       "X-Content-Type-Options": "nosniff",
-      "Content-Security-Policy": "default-src 'self'; connect-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:",
+      "Content-Security-Policy": "default-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline' https://unpkg.com; script-src 'self' https://unpkg.com; img-src 'self' data: https://unpkg.com https://*.tile.openstreetmap.org",
       "Referrer-Policy": "no-referrer",
     });
     response.end(content);
