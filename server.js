@@ -32,10 +32,15 @@ async function getForecast(location) {
   });
   const forecastResponse = await fetch(forecastUrl, { signal: AbortSignal.timeout(10000) });
   if (!forecastResponse.ok) throw new Error("The forecast is temporarily unavailable.");
+  const forecastPayload = await forecastResponse.json();
+  const forecast = forecastPayload.data ?? forecastPayload;
+  if (forecastPayload.success === false || !Array.isArray(forecast.daily) || !forecast.currently) {
+    throw new Error("The forecast response is incomplete.");
+  }
 
   return {
     place: { name: place.name, admin1: place.admin1, country: place.country, timezone: place.timezone },
-    forecast: await forecastResponse.json(),
+    forecast,
   };
 }
 

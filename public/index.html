@@ -1,67 +1,47 @@
 <!doctype html>
-<html lang="en">
+<html lang="nl">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#f2f5ee">
-    <meta name="description" content="A clear five-day weather forecast for planning your next bike ride.">
-    <title>Fietsweer | Weather for the ride ahead</title>
+    <meta name="theme-color" content="#1b1d2c">
+    <meta name="description" content="Bekijk de fietsscore voor vandaag en morgen op jouw locatie.">
+    <title>Fietsweer | Activiteiten</title>
     <link rel="stylesheet" href="/styles.css">
     <script src="/app.js" defer></script>
   </head>
   <body>
-    <header class="topbar">
-      <a class="wordmark" href="/" aria-label="Fietsweer home">
-        <span class="wordmark-mark" aria-hidden="true">f.</span><span>fietsweer</span>
-      </a>
-      <span class="topbar-note"><span class="live-dot"></span> The ride forecast</span>
-    </header>
     <main class="page-shell">
-      <section class="intro" aria-labelledby="page-title">
-        <p class="eyebrow">A little weather, a better ride</p>
-        <h1 id="page-title">Make room<br>for the <span>good days.</span></h1>
-        <p class="intro-copy">See what the next five days have in store, then pick your moment to ride.</p>
-      </section>
-      <section class="search-panel" aria-label="Search weather by location">
+      <section class="search-panel" aria-label="Zoek weer op locatie">
         <form id="location-form" class="location-form">
-          <label for="location-input">Where are you riding?</label>
+          <label for="location-input">Kies je locatie</label>
           <div class="search-row">
             <div class="input-wrap">
               <span class="pin-icon" aria-hidden="true">⌖</span>
-              <input id="location-input" name="location" type="search" placeholder="City or town" autocomplete="address-level2" maxlength="100" required>
+              <input id="location-input" name="location" type="search" placeholder="Plaats of stad" autocomplete="address-level2" maxlength="100" required>
             </div>
-            <button type="submit"><span>Find forecast</span><span class="button-arrow" aria-hidden="true">↗</span></button>
+            <button type="submit"><span>Toon fietsscore</span><span class="button-arrow" aria-hidden="true">↗</span></button>
           </div>
-          <p class="form-hint">Try a city name, like Utrecht or Copenhagen.</p>
         </form>
       </section>
       <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
       <section id="weather-results" class="weather-results" aria-live="polite" hidden>
         <div class="results-heading">
-          <div><p class="eyebrow">Your forecast</p><h2 id="place-name"></h2></div>
-          <p id="forecast-dates" class="date-range"></p>
+          <p id="place-name" class="place-name"></p>
         </div>
-        <div class="weather-layout">
-          <article class="today-panel">
-            <div class="today-topline"><p>Right now</p><span id="current-day"></span></div>
-            <div class="current-weather">
-              <span id="current-icon" class="weather-symbol" aria-hidden="true"></span>
-              <div><p id="current-temp" class="current-temp"></p><p id="current-description" class="current-description"></p></div>
-            </div>
-            <div class="today-details">
-              <div><span>Feels like</span><strong id="feels-like"></strong></div>
-              <div><span>Wind</span><strong id="current-wind"></strong></div>
-              <div><span>Humidity</span><strong id="humidity"></strong></div>
-            </div>
-          </article>
-          <section class="forecast-panel" aria-labelledby="forecast-heading">
-            <div class="forecast-header"><h3 id="forecast-heading">Five days ahead</h3><span>Ride score / 10</span></div>
-            <div id="forecast-list" class="forecast-list"></div>
-          </section>
+        <div class="activity-table-wrap">
+          <table class="activity-table">
+            <thead><tr id="score-days"><th scope="col" class="activity-heading"></th></tr></thead>
+            <tbody><tr id="cycling-scores"><th scope="row" class="activity-name">
+              <svg class="bike-icon" viewBox="0 0 64 44" aria-hidden="true">
+                <circle cx="13" cy="31" r="10"></circle><circle cx="51" cy="31" r="10"></circle>
+                <path d="m13 31 12-18 10 18H13l9-13h16l13 13M25 13h-7m14 0h8l5 8"></path>
+              </svg>
+              <span>Fietsen</span>
+            </th></tr></tbody>
+          </table>
         </div>
-        <p class="source-note">Weather data by Infoplaza</p>
+        <p class="source-note">Weerdata door Infoplaza</p>
       </section>
     </main>
-    <footer class="page-footer"><span>Fietsweer</span><span>Find your clear skies.</span></footer>
   </body>
 </html>
