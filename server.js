@@ -10,21 +10,26 @@ const mimeTypes = {
   ".js": "text/javascript; charset=utf-8",
 };
 
-async function getForecast(location) {
-  const geocodingUrl = new URL("https://geocoding-api.open-meteo.com/v1/search");
-  geocodingUrl.search = new URLSearchParams({ count: "1", language: "en", name: location, format: "json" });
-  const geocodingResponse = await fetch(geocodingUrl, { signal: AbortSignal.timeout(10000) });
-  if (!geocodingResponse.ok) throw new Error("Location search is temporarily unavailable.");
+async function getForecast(location, coordinates) {
+  let place;
+  if (!coordinates) {
+    const geocodingUrl = new URL("https://geocoding-api.open-meteo.com/v1/search");
+    geocodingUrl.search = new URLSearchParams({ count: "1", language: "en", name: location, format: "json" });
+    const geocodingResponse = await fetch(geocodingUrl, { signal: AbortSignal.timeout(10000) });
+    if (!geocodingResponse.ok) throw new Error("Location search is temporarily unavailable.");
 
-  const place = (await geocodingResponse.json()).results?.[0];
-  if (!place) return null;
+    place = (await geocodingResponse.json()).results?.[0];
+    if (!place) return null;
+  }
 
   const apiKey = process.env.INFOPLAZA_API_KEY;
+  const latitude = coordinates?.latitude ?? place.latitude;
+  const longitude = coordinates?.longitude ?? place.longitude;
 
   const forecastUrl = new URL("https://api.infoplaza.com/v1/weather/forecast");
   forecastUrl.search = new URLSearchParams({
-    lat: String(place.latitude),
-    lon: String(place.longitude),
+    lat: String(latitude),
+    lon: String(longitude),
     api_key: apiKey,
     units: "metric",
     max_daily: "5",
@@ -39,7 +44,12 @@ async function getForecast(location) {
   }
 
   return {
-    place: { name: place.name, admin1: place.admin1, country: place.country, timezone: place.timezone },
+    place: {
+      name: place?.name || forecast.location || `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`,
+      admin1: place?.admin1,
+      country: place?.country || forecast.country,
+      timezone: place?.timezone || forecast.timezone,
+    },
     forecast,
   };
 }
@@ -63,7 +73,20 @@ const server = http.createServer(async (request, response) => {
 
   if (requestUrl.pathname === "/api/forecast") {
     const location = requestUrl.searchParams.get("location")?.trim();
-    if (!location || location.length > 100) {
+    const latitudeParam = requestUrl.searchParams.get("lat");
+    const longitudeParam = requestUrl.searchParams.get("lon");
+    const hasCoordinates = latitudeParam !== null || longitudeParam !== null;
+    let coordinates;
+    if (hasCoordinates) {
+      const latitude = Number(latitudeParam);
+      const longitude = Number(longitudeParam);
+      if (location || latitudeParam === null || longitudeParam === null || latitudeParam.trim() === "" || longitudeParam.trim() === "" ||
+        !Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+        sendJson(response, 400, { error: "The current-location coordinates are invalid." });
+        return;
+      }
+      coordinates = { latitude, longitude };
+    } else if (!location || location.length > 100) {
       sendJson(response, 400, { error: "Enter a location up to 100 characters long." });
       return;
     }
@@ -72,7 +95,7 @@ const server = http.createServer(async (request, response) => {
       return;
     }
     try {
-      const result = await getForecast(location);
+      const result = await getForecast(location, coordinates);
       if (!result) {
         sendJson(response, 404, { error: "We couldn't find that place. Try a nearby city." });
         return;

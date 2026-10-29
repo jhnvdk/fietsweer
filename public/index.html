@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#1b1d2c">
-    <meta name="description" content="Bekijk de fietsscore voor vandaag en morgen op jouw locatie.">
+    <meta name="description" content="Bekijk de fietsscore voor de komende vijf dagen op basis van je locatie.">
     <title>Fietsweer | Activiteiten</title>
     <link rel="stylesheet" href="/styles.css">
     <script src="/app.js" defer></script>
@@ -19,7 +19,11 @@
               <span class="pin-icon" aria-hidden="true">⌖</span>
               <input id="location-input" name="location" type="search" placeholder="Plaats of stad" autocomplete="address-level2" maxlength="100" required>
             </div>
-            <button type="submit"><span>Toon fietsscore</span><span class="button-arrow" aria-hidden="true">↗</span></button>
+            <button type="submit"><span class="button-label">Toon fietsscore</span><span class="button-arrow" aria-hidden="true">↗</span></button>
+            <button id="current-location-button" class="current-location-button" type="button">
+              <span class="location-button-icon" aria-hidden="true">⌖</span>
+              <span class="button-label">Gebruik mijn locatie</span>
+            </button>
           </div>
         </form>
       </section>

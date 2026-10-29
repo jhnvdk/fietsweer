@@ -14,6 +14,8 @@ npm start
 
 Put `INFOPLAZA_API_KEY=your_api_key` in the ignored `.env` file. Both `npm start` and `npm run dev` load it automatically. Open http://localhost:8080.
 
+Use the current-location button to request your device's location. The browser asks for permission, and location access requires HTTPS (localhost is supported).
+
 On Fly.io, the app reads `INFOPLAZA_API_KEY` from the existing Fly secret; no local `.env` file is needed in the image.
 
 Run the syntax checks with `npm run check`.

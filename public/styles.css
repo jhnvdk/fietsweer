@@ -37,6 +37,9 @@ button, input { font: inherit; }
  .search-row button:hover { background: #414861; transform: translateY(-1px); }
  .search-row button:focus-visible { outline: 3px solid #aeb6d1; outline-offset: 3px; }
  .search-row button:disabled { cursor: wait; opacity: .7; }
+ .search-row .current-location-button { min-width: 190px; justify-content: center; white-space: nowrap; background: #252a3d; }
+ .search-row .current-location-button:hover { background: #343a50; }
+ .location-button-icon { font-size: 18px; }
  .button-arrow { color: #b7c1e1; font-size: 18px; }
  .status-message { max-width: 680px; min-height: 0; margin: 0 auto; color: var(--muted); font-size: 13px; }
  .status-message:not(:empty) { min-height: 24px; margin-top: -18px; margin-bottom: 14px; }

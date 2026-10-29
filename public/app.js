@@ -2,6 +2,7 @@ const form = document.querySelector("#location-form");
 const input = document.querySelector("#location-input");
 const statusMessage = document.querySelector("#status-message");
 const results = document.querySelector("#weather-results");
+const currentLocationButton = document.querySelector("#current-location-button");
 
 function formatDay(timestamp, timezone, options) {
   return new Intl.DateTimeFormat("nl-NL", { ...options, timeZone: timezone }).format(new Date(timestamp * 1000));
@@ -61,18 +62,35 @@ function renderForecast(data) {
   results.hidden = false;
 }
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const location = input.value.trim();
-  if (!location) return;
-  const button = form.querySelector("button");
+function getCurrentPosition() {
+  if (!window.isSecureContext) {
+    throw new Error("Locatietoegang werkt alleen via een beveiligde HTTPS-verbinding.");
+  }
+  if (!navigator.geolocation) {
+    throw new Error("Je browser ondersteunt geen locatietoegang.");
+  }
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, (error) => {
+      const messages = {
+        1: "Geef toestemming voor locatietoegang in je browserinstellingen.",
+        2: "Je locatie kon niet worden bepaald. Probeer het opnieuw.",
+        3: "Het bepalen van je locatie duurde te lang. Probeer het opnieuw.",
+      };
+      reject(new Error(messages[error.code] || "Je locatie kon niet worden bepaald."));
+    }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
+  });
+}
+
+async function runForecastAction(button, loadingText, getUrl) {
+  const label = button.querySelector(".button-label");
+  const originalLabel = label.textContent;
   button.disabled = true;
-  button.querySelector("span:first-child").textContent = "Bezig…";
+  label.textContent = loadingText;
   statusMessage.textContent = "";
   statusMessage.classList.remove("is-error");
   results.hidden = true;
   try {
-    const response = await fetch(`/api/forecast?location=${encodeURIComponent(location)}`);
+    const response = await fetch(await getUrl());
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Something went wrong. Please try again.");
     renderForecast(data);
@@ -82,6 +100,26 @@ form.addEventListener("submit", async (event) => {
     statusMessage.classList.add("is-error");
   } finally {
     button.disabled = false;
-    button.querySelector("span:first-child").textContent = "Toon fietsscore";
+    label.textContent = originalLabel;
   }
+}
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const location = input.value.trim();
+  if (!location) return;
+  await runForecastAction(form.querySelector("button[type=submit]"), "Bezig…", () =>
+    `/api/forecast?location=${encodeURIComponent(location)}`,
+  );
+});
+
+currentLocationButton.addEventListener("click", async () => {
+  await runForecastAction(currentLocationButton, "Locatie bepalen…", async () => {
+    const position = await getCurrentPosition();
+    const query = new URLSearchParams({
+      lat: String(position.coords.latitude),
+      lon: String(position.coords.longitude),
+    });
+    return `/api/forecast?${query}`;
+  });
 });
