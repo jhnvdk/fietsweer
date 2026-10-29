@@ -4,28 +4,52 @@ const statusMessage = document.querySelector("#status-message");
 const results = document.querySelector("#weather-results");
 const currentLocationButton = document.querySelector("#current-location-button");
 const dayWeatherDialog = document.querySelector("#day-weather-dialog");
-const overviewMapButton = document.querySelector("#overview-map-button");
+const countryMapButtons = [...document.querySelectorAll(".country-map-button")];
 const overviewMapDialog = document.querySelector("#overview-map-dialog");
 const overviewMapElement = document.querySelector("#overview-map");
 const overviewMapStatus = document.querySelector("#overview-map-status");
 const overviewMapDay = document.querySelector("#overview-map-day");
-const provincialCapitals = [
-  { province: "Groningen", name: "Groningen", latitude: 53.2194, longitude: 6.5665 },
-  { province: "Friesland", name: "Leeuwarden", latitude: 53.2012, longitude: 5.7999 },
-  { province: "Drenthe", name: "Assen", latitude: 52.9925, longitude: 6.5642 },
-  { province: "Overijssel", name: "Zwolle", latitude: 52.5168, longitude: 6.0830 },
-  { province: "Flevoland", name: "Lelystad", latitude: 52.5185, longitude: 5.4714 },
-  { province: "Gelderland", name: "Arnhem", latitude: 51.9851, longitude: 5.8987 },
-  { province: "Utrecht", name: "Utrecht", latitude: 52.0907, longitude: 5.1214 },
-  { province: "Noord-Holland", name: "Haarlem", latitude: 52.3874, longitude: 4.6462 },
-  { province: "Zuid-Holland", name: "Den Haag", latitude: 52.0705, longitude: 4.3007 },
-  { province: "Zeeland", name: "Middelburg", latitude: 51.4988, longitude: 3.6100 },
-  { province: "Noord-Brabant", name: "'s-Hertogenbosch", latitude: 51.6978, longitude: 5.3037 },
-  { province: "Limburg", name: "Maastricht", latitude: 50.8514, longitude: 5.6910 },
-];
+const mapCountries = {
+  netherlands: {
+    name: "Nederland",
+    timezone: "Europe/Amsterdam",
+    capitals: [
+      { province: "Groningen", name: "Groningen", latitude: 53.2194, longitude: 6.5665 },
+      { province: "Friesland", name: "Leeuwarden", latitude: 53.2012, longitude: 5.7999 },
+      { province: "Drenthe", name: "Assen", latitude: 52.9925, longitude: 6.5642 },
+      { province: "Overijssel", name: "Zwolle", latitude: 52.5168, longitude: 6.0830 },
+      { province: "Flevoland", name: "Lelystad", latitude: 52.5185, longitude: 5.4714 },
+      { province: "Gelderland", name: "Arnhem", latitude: 51.9851, longitude: 5.8987 },
+      { province: "Utrecht", name: "Utrecht", latitude: 52.0907, longitude: 5.1214 },
+      { province: "Noord-Holland", name: "Haarlem", latitude: 52.3874, longitude: 4.6462 },
+      { province: "Zuid-Holland", name: "Den Haag", latitude: 52.0705, longitude: 4.3007 },
+      { province: "Zeeland", name: "Middelburg", latitude: 51.4988, longitude: 3.6100 },
+      { province: "Noord-Brabant", name: "'s-Hertogenbosch", latitude: 51.6978, longitude: 5.3037 },
+      { province: "Limburg", name: "Maastricht", latitude: 50.8514, longitude: 5.6910 },
+    ],
+  },
+  belgium: {
+    name: "België",
+    timezone: "Europe/Brussels",
+    capitals: [
+      { province: "Antwerpen", name: "Antwerpen", latitude: 51.2194, longitude: 4.4025 },
+      { province: "Limburg", name: "Hasselt", latitude: 50.9307, longitude: 5.3325 },
+      { province: "Oost-Vlaanderen", name: "Gent", latitude: 51.0543, longitude: 3.7174 },
+      { province: "Vlaams-Brabant", name: "Leuven", latitude: 50.8798, longitude: 4.7005 },
+      { province: "West-Vlaanderen", name: "Brugge", latitude: 51.2093, longitude: 3.2247 },
+      { province: "Waals-Brabant", name: "Waver", latitude: 50.7172, longitude: 4.6120 },
+      { province: "Henegouwen", name: "Bergen", latitude: 50.4542, longitude: 3.9523 },
+      { province: "Luik", name: "Luik", latitude: 50.6326, longitude: 5.5797 },
+      { province: "Luxemburg", name: "Aarlen", latitude: 49.6833, longitude: 5.8167 },
+      { province: "Namen", name: "Namen", latitude: 50.4674, longitude: 4.8718 },
+    ],
+  },
+};
 const overviewForecasts = new Map();
 let overviewMap;
 let overviewMapMarkers;
+let activeMapCountryKey;
+let activeMapCountry;
 
 function formatDay(timestamp, timezone, options) {
   return new Intl.DateTimeFormat("nl-NL", { ...options, timeZone: timezone }).format(new Date(timestamp * 1000));
@@ -124,7 +148,7 @@ function scoreRideWeather(temperature, wind, rainProbability, rainIntensity, pre
 }
 
 function initializeOverviewMap() {
-  overviewMap = L.map(overviewMapElement, { scrollWheelZoom: false }).setView([52.15, 5.35], 7);
+  overviewMap = L.map(overviewMapElement, { scrollWheelZoom: false }).setView([51.5, 5], 6);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap-bijdragers</a>',
@@ -134,15 +158,16 @@ function initializeOverviewMap() {
 
 function updateOverviewMapMarkers(dayIndex) {
   overviewMapMarkers.clearLayers();
-  const dateForecast = [...overviewForecasts.values()].find((data) => data.forecast.daily[dayIndex]);
+  const countryForecasts = activeMapCountry.capitals.map((capital) => overviewForecasts.get(`${activeMapCountryKey}:${capital.province}`));
+  const dateForecast = countryForecasts.find((data) => data?.forecast.daily[dayIndex]);
   if (!dateForecast) return;
   const selectedDay = dateForecast.forecast.daily[dayIndex];
-  const selectedDate = formatDay(selectedDay.time, dateForecast.forecast.timezone || "Europe/Amsterdam", {
+  const selectedDate = formatDay(selectedDay.time, dateForecast.forecast.timezone || activeMapCountry.timezone, {
     weekday: "long", day: "numeric", month: "long",
   });
 
-  for (const capital of provincialCapitals) {
-    const data = overviewForecasts.get(capital.province);
+  for (const capital of activeMapCountry.capitals) {
+    const data = overviewForecasts.get(`${activeMapCountryKey}:${capital.province}`);
     const day = data?.forecast.daily[dayIndex];
     if (!day) continue;
     const score = scoreRideWeather(day.apparentTemperature, day.windSpeed, day.precipProbability, day.precipIntensity, day.precipType);
@@ -167,11 +192,12 @@ function updateOverviewMapMarkers(dayIndex) {
     popup.append(heading, scoreText, weatherText);
     marker.bindPopup(popup).addTo(overviewMapMarkers);
   }
-  overviewMapStatus.textContent = `${selectedDate} · fietsscore in ${overviewForecasts.size} van de ${provincialCapitals.length} hoofdsteden`;
+  const loadedCount = countryForecasts.filter((data) => Array.isArray(data?.forecast.daily) && data.forecast.daily.length).length;
+  overviewMapStatus.textContent = `${selectedDate} · fietsscore in ${loadedCount} van de ${activeMapCountry.capitals.length} hoofdsteden`;
 }
 
 async function loadOverviewForecasts() {
-  const missingCapitals = provincialCapitals.filter((capital) => !overviewForecasts.has(capital.province));
+  const missingCapitals = activeMapCountry.capitals.filter((capital) => !overviewForecasts.has(`${activeMapCountryKey}:${capital.province}`));
   if (missingCapitals.length) {
     overviewMapStatus.textContent = `Weer ophalen voor ${missingCapitals.length} hoofdsteden…`;
     await Promise.all(missingCapitals.map(async (capital) => {
@@ -180,32 +206,41 @@ async function loadOverviewForecasts() {
         const response = await fetch(`/api/forecast?${query}`);
         const data = await response.json();
         if (!response.ok || !Array.isArray(data.forecast?.daily)) throw new Error("Forecast unavailable");
-        overviewForecasts.set(capital.province, data);
+        overviewForecasts.set(`${activeMapCountryKey}:${capital.province}`, data);
       } catch {
         return;
       }
     }));
   }
 
-  if (overviewForecasts.size === 0) {
+  const availableForecasts = activeMapCountry.capitals
+    .map((capital) => overviewForecasts.get(`${activeMapCountryKey}:${capital.province}`))
+    .filter((data) => Array.isArray(data?.forecast.daily) && data.forecast.daily.length);
+  if (availableForecasts.length === 0) {
     overviewMapStatus.textContent = "De weerscores konden niet worden geladen. Sluit de kaart en probeer het opnieuw.";
     return;
   }
 
-  const firstForecast = overviewForecasts.values().next().value.forecast;
+  const previousDayIndex = Number(overviewMapDay.value) || 0;
+  const firstForecast = availableForecasts[0].forecast;
   overviewMapDay.replaceChildren(...firstForecast.daily.map((day, index) => {
     const option = document.createElement("option");
     option.value = String(index);
-    option.textContent = formatDay(day.time, firstForecast.timezone || "Europe/Amsterdam", {
+    option.textContent = formatDay(day.time, firstForecast.timezone || activeMapCountry.timezone, {
       weekday: "short", day: "numeric", month: "short",
     });
     return option;
   }));
   overviewMapDay.disabled = false;
+  overviewMapDay.value = String(Math.min(previousDayIndex, firstForecast.daily.length - 1));
   updateOverviewMapMarkers(Number(overviewMapDay.value) || 0);
 }
 
-async function openOverviewMap() {
+async function openOverviewMap(countryKey) {
+  activeMapCountryKey = countryKey;
+  activeMapCountry = mapCountries[countryKey];
+  document.querySelector("#overview-map-title").textContent = activeMapCountry.name;
+  overviewMapElement.setAttribute("aria-label", `Kaart van ${activeMapCountry.name} met fietsscores per provinciehoofdstad`);
   overviewMapDialog.showModal();
   await new Promise((resolve) => requestAnimationFrame(resolve));
   if (!window.L) {
@@ -214,16 +249,22 @@ async function openOverviewMap() {
   }
   if (!overviewMap) initializeOverviewMap();
   overviewMap.invalidateSize();
+  overviewMap.fitBounds(L.latLngBounds(activeMapCountry.capitals.map((capital) => [capital.latitude, capital.longitude])), {
+    padding: [30, 30],
+    maxZoom: 7,
+  });
   await loadOverviewForecasts();
 }
 
-overviewMapButton.addEventListener("click", async () => {
-  overviewMapButton.disabled = true;
-  try {
-    await openOverviewMap();
-  } finally {
-    overviewMapButton.disabled = false;
-  }
+countryMapButtons.forEach((button) => {
+  button.addEventListener("click", async () => {
+    countryMapButtons.forEach((mapButton) => { mapButton.disabled = true; });
+    try {
+      await openOverviewMap(button.dataset.country);
+    } finally {
+      countryMapButtons.forEach((mapButton) => { mapButton.disabled = false; });
+    }
+  });
 });
 
 overviewMapDay.addEventListener("change", () => updateOverviewMapMarkers(Number(overviewMapDay.value)));

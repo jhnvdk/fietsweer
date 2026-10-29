@@ -41,8 +41,8 @@ button, input { font: inherit; }
  .search-row .location-actions button { min-width: 0; justify-content: center; white-space: nowrap; }
  .search-row .current-location-button { min-width: 190px; background: #252a3d; }
  .search-row .current-location-button:hover { background: #343a50; }
- .search-row .overview-map-button { min-width: 150px; background: #252a3d; }
- .search-row .overview-map-button:hover { background: #343a50; }
+ .search-row .country-map-button { min-width: 48px; padding: 0; background: #252a3d; font-size: 24px; }
+ .search-row .country-map-button:hover { background: #343a50; }
  .location-button-icon { font-size: 18px; }
  .button-arrow { color: #b7c1e1; font-size: 18px; }
  .status-message { max-width: 680px; min-height: 0; margin: 0 auto; color: var(--muted); font-size: 13px; }
@@ -102,6 +102,7 @@ button, input { font: inherit; }
   .search-row button { width: 100%; }
   .location-actions { width: 100%; }
   .search-row .location-actions button { flex: 1 1 0; padding: 0 8px; font-size: 12px; }
+  .search-row .location-actions .country-map-button { flex: 0 0 48px; padding: 0; font-size: 23px; }
   .results-heading { align-items: end; margin-bottom: 20px; }
   .place-name { font-size: 20px; }
   .overview-map-dialog { padding: 14px; }
