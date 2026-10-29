@@ -241,6 +241,9 @@ async function openOverviewMap(countryKey) {
   activeMapCountry = mapCountries[countryKey];
   document.querySelector("#overview-map-title").textContent = activeMapCountry.name;
   overviewMapElement.setAttribute("aria-label", `Kaart van ${activeMapCountry.name} met fietsscores per provinciehoofdstad`);
+  overviewMapStatus.textContent = `Kaart laden voor ${activeMapCountry.name}…`;
+  overviewMapDay.disabled = true;
+  overviewMapMarkers?.clearLayers();
   overviewMapDialog.showModal();
   await new Promise((resolve) => requestAnimationFrame(resolve));
   if (!window.L) {
