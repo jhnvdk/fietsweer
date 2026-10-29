@@ -57,9 +57,12 @@ button, input { font: inherit; }
  .activity-name { display: flex; align-items: center; gap: 28px; padding: 20px 10px 20px 4px; font-size: 36px; font-weight: 400; text-align: left; white-space: nowrap; }
  .bike-icon { width: 64px; flex: 0 0 auto; fill: none; stroke: var(--ink); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.2; }
  .activity-table td { text-align: center; }
+ .score-cell-content { display: grid; justify-items: center; gap: 8px; }
  .score-value { width: 76px; height: 76px; display: inline-grid; place-items: center; margin: 0 auto; color: #182332; background: var(--green); border-radius: 50%; font-size: 42px; font-weight: 750; line-height: 1; }
  .score-value.is-medium { background: var(--green-soft); }
  .score-value.is-low { background: var(--amber); }
+ .weather-details { display: grid; justify-items: center; gap: 3px; color: var(--muted); font-size: 11px; line-height: 1.2; white-space: nowrap; }
+ .weather-rain { display: inline-flex; align-items: center; gap: 3px; }
  .source-note { margin: 14px 0 0; color: var(--muted); font-size: 11px; text-align: right; }
 @media (max-width: 690px) {
   .page-shell { padding: 24px 22px 40px; }
@@ -77,6 +80,8 @@ button, input { font: inherit; }
   .activity-name { grid-column: 1 / -1; justify-content: center; gap: 12px; padding: 18px 4px 8px; border-bottom: 0; font-size: 20px; }
   .bike-icon { width: 38px; }
   .activity-table td { min-width: 0; display: grid; place-items: center; padding: 12px 0 16px; }
+  .score-cell-content { gap: 6px; }
+  .weather-details { font-size: 10px; }
   .score-value { width: clamp(36px, 11vw, 48px); height: clamp(36px, 11vw, 48px); font-size: clamp(22px, 6vw, 28px); }
 }
 @media (max-width: 380px) {
@@ -84,5 +89,6 @@ button, input { font: inherit; }
   .activity-table thead th { font-size: 12px; }
   .activity-name { gap: 8px; font-size: 18px; }
   .bike-icon { width: 32px; }
+  .weather-details { font-size: 9px; }
   .score-value { width: 34px; height: 34px; font-size: 20px; }
 }

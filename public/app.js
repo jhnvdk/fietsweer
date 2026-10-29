@@ -14,6 +14,28 @@ function locationLabel(place) {
     .join(", ");
 }
 
+function windDirection(bearing) {
+  if (!Number.isFinite(bearing)) return null;
+  const directions = [
+    ["N", "noorden"], ["NO", "noordoosten"], ["O", "oosten"], ["ZO", "zuidoosten"],
+    ["Z", "zuiden"], ["ZW", "zuidwesten"], ["W", "westen"], ["NW", "noordwesten"],
+  ];
+  const normalizedBearing = ((bearing % 360) + 360) % 360;
+  return directions[Math.round(normalizedBearing / 45) % directions.length];
+}
+
+function beaufortForce(speedKmh) {
+  if (!Number.isFinite(speedKmh) || speedKmh < 0) return null;
+  const thresholds = [1, 6, 12, 20, 29, 39, 50, 62, 75, 89, 103, 118];
+  const force = thresholds.findIndex((threshold) => speedKmh < threshold);
+  return force === -1 ? 12 : force;
+}
+
+function formatPrecipitationIntensity(value) {
+  if (!Number.isFinite(value)) return null;
+  return new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 1 }).format(value);
+}
+
 function scoreRideWeather(temperature, wind, rainProbability, rainIntensity, precipType) {
   let penalty = temperature < 10 || temperature > 32 ? 3
     : temperature < 14 || temperature > 28 ? 2
@@ -51,8 +73,38 @@ function renderForecast(data) {
     else if (score < 8) value.classList.add("is-medium");
     value.setAttribute("aria-label", `Fietsscore: ${score} van de 10`);
     value.textContent = String(score);
-    cell.setAttribute("aria-label", `${formatDay(dayData.time, timezone, { weekday: "long" })}: ${score} van 10`);
-    cell.append(value);
+    const direction = windDirection(dayData.windBearing);
+    const force = beaufortForce(dayData.windSpeed);
+    const rainProbability = Number.isFinite(dayData.precipProbability)
+      ? Math.round(dayData.precipProbability * 100)
+      : null;
+    const rainIntensity = formatPrecipitationIntensity(dayData.precipIntensity);
+    const details = document.createElement("span");
+    details.className = "weather-details";
+    const wind = document.createElement("span");
+    wind.className = "weather-wind";
+    wind.textContent = `${direction?.[0] || "—"} · Bft ${force ?? "—"}`;
+    const rain = document.createElement("span");
+    rain.className = "weather-rain";
+    const rainIcon = document.createElement("span");
+    rainIcon.setAttribute("aria-hidden", "true");
+    rainIcon.textContent = "☂";
+    rain.append(rainIcon, document.createTextNode(` ${rainProbability ?? "—"}%`));
+    details.append(wind, rain);
+    const weekday = formatDay(dayData.time, timezone, { weekday: "long" });
+    const accessibleWind = direction
+      ? `wind uit het ${direction[1]}`
+      : "windrichting onbekend";
+    const accessibleForce = force === null ? "windkracht onbekend" : `Beaufort ${force}`;
+    const accessibleRain = rainProbability === null ? "regenkans onbekend" : `regenkans ${rainProbability} procent`;
+    const accessibleIntensity = rainIntensity === null ? "neerslagintensiteit onbekend" : `neerslagintensiteit ${rainIntensity} millimeter per uur`;
+    const weatherDescription = `${accessibleWind}, ${accessibleForce}; ${accessibleRain}; ${accessibleIntensity}`;
+    cell.setAttribute("aria-label", `${weekday}: ${score} van 10; ${weatherDescription}`);
+    cell.title = weatherDescription;
+    const content = document.createElement("span");
+    content.className = "score-cell-content";
+    content.append(value, details);
+    cell.append(content);
     return cell;
   });
   document.querySelector("#cycling-scores").replaceChildren(
