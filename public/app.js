@@ -3,6 +3,7 @@ const input = document.querySelector("#location-input");
 const statusMessage = document.querySelector("#status-message");
 const results = document.querySelector("#weather-results");
 const currentLocationButton = document.querySelector("#current-location-button");
+const dayWeatherDialog = document.querySelector("#day-weather-dialog");
 
 function formatDay(timestamp, timezone, options) {
   return new Intl.DateTimeFormat("nl-NL", { ...options, timeZone: timezone }).format(new Date(timestamp * 1000));
@@ -34,6 +35,56 @@ function beaufortForce(speedKmh) {
 function formatPrecipitationIntensity(value) {
   if (!Number.isFinite(value)) return null;
   return new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 1 }).format(value);
+}
+
+function formatWeatherValue(value, suffix = "", digits = 0) {
+  if (!Number.isFinite(value)) return "Onbekend";
+  return `${new Intl.NumberFormat("nl-NL", { maximumFractionDigits: digits }).format(value)}${suffix}`;
+}
+
+function describeDayWeather(day) {
+  const precipitation = day.precipType === "snow" ? "Sneeuw" : day.precipType === "sleet" ? "Natte sneeuw" : day.precipType === "hail" ? "Hagel" : "Regen";
+  if (day.precipProbability >= 0.6 && day.precipIntensity >= 1) return `${precipitation} verwacht`;
+  if (day.precipProbability >= 0.3 && day.precipIntensity > 0) return `${precipitation} mogelijk`;
+  if (day.cloudCover >= 0.8) return "Overwegend bewolkt";
+  if (day.cloudCover >= 0.45) return "Gedeeltelijk bewolkt";
+  if (day.cloudCover >= 0.15) return "Licht bewolkt";
+  return "Overwegend zonnig";
+}
+
+function openDayWeather(day, timezone) {
+  const direction = windDirection(day.windBearing);
+  const force = beaufortForce(day.windSpeed);
+  const title = formatDay(day.time, timezone, { weekday: "long", day: "numeric", month: "long" });
+  document.querySelector("#day-weather-title").textContent = title;
+  document.querySelector("#day-weather-summary").textContent = describeDayWeather(day);
+
+  const metrics = [
+    ["Maximumtemperatuur", formatWeatherValue(day.temperatureHigh, " °C")],
+    ["Minimumtemperatuur", formatWeatherValue(day.temperatureLow, " °C")],
+    ["Gevoelstemperatuur", formatWeatherValue(day.apparentTemperature, " °C", 1)],
+    ["Wind", `${direction ? `Uit het ${direction[1]}` : "Richting onbekend"} · ${force === null ? "Beaufort onbekend" : `Beaufort ${force}`}`],
+    ["Neerslagkans", formatWeatherValue(day.precipProbability * 100, "%")],
+    ["Neerslagintensiteit", formatWeatherValue(day.precipIntensity, " mm/u", 1)],
+    ["Bewolking", formatWeatherValue(day.cloudCover * 100, "%")],
+    ["Luchtvochtigheid", formatWeatherValue(day.humidity * 100, "%")],
+    ["Dauwpunt", formatWeatherValue(day.dewPoint, " °C", 1)],
+    ["Luchtdruk", formatWeatherValue(day.pressure, " hPa", 1)],
+    ["UV-index", formatWeatherValue(day.uvIndex, "", 1)],
+    ["Zonnestraling", formatWeatherValue(day.globalRadiationSum, " Wh/m²")],
+  ];
+  if (Number.isFinite(day.windGust)) {
+    metrics.splice(4, 0, ["Windstoten", `Beaufort ${beaufortForce(day.windGust)}`]);
+  }
+  const details = document.querySelector("#day-weather-details");
+  details.replaceChildren(...metrics.flatMap(([label, value]) => {
+    const term = document.createElement("dt");
+    term.textContent = label;
+    const description = document.createElement("dd");
+    description.textContent = value;
+    return [term, description];
+  }));
+  dayWeatherDialog.showModal();
 }
 
 function scoreRideWeather(temperature, wind, rainProbability, rainIntensity, precipType) {
@@ -101,9 +152,13 @@ function renderForecast(data) {
     const weatherDescription = `${accessibleWind}, ${accessibleForce}; ${accessibleRain}; ${accessibleIntensity}`;
     cell.setAttribute("aria-label", `${weekday}: ${score} van 10; ${weatherDescription}`);
     cell.title = weatherDescription;
-    const content = document.createElement("span");
+    const content = document.createElement("button");
+    content.type = "button";
     content.className = "score-cell-content";
+    content.setAttribute("aria-haspopup", "dialog");
+    content.setAttribute("aria-label", `Bekijk volledig weerbericht voor ${weekday}, fietsscore ${score} van 10`);
     content.append(value, details);
+    content.addEventListener("click", () => openDayWeather(dayData, timezone));
     cell.append(content);
     return cell;
   });
