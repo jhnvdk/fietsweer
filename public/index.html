@@ -50,6 +50,35 @@
         </div>
         <p class="source-note">Weerdata door Infoplaza</p>
       </section>
+      <section class="compare-panel" aria-labelledby="compare-title">
+        <h2 id="compare-title" class="compare-title">Vergelijk drie bestemmingen</h2>
+        <p class="compare-intro">Plan je fietsvakantie: zie welke plek de komende vijf dagen het beste fietsweer heeft.</p>
+        <form id="compare-form" class="compare-form">
+          <div class="compare-inputs">
+            <label>Bestemming 1
+              <input name="compare-location" type="search" placeholder="Bijv. Maastricht" maxlength="100" required>
+            </label>
+            <label>Bestemming 2
+              <input name="compare-location" type="search" placeholder="Bijv. Bouillon" maxlength="100" required>
+            </label>
+            <label>Bestemming 3
+              <input name="compare-location" type="search" placeholder="Bijv. Texel" maxlength="100" required>
+            </label>
+          </div>
+          <button id="compare-button" type="submit"><span class="button-label">Vergelijk</span><span class="button-arrow" aria-hidden="true">↗</span></button>
+        </form>
+        <p id="compare-status" class="compare-status" role="status" aria-live="polite"></p>
+        <div id="compare-results" class="compare-results" hidden>
+          <p id="compare-winner" class="compare-winner"></p>
+          <div class="compare-table-wrap">
+            <table class="compare-table" aria-label="Fietsscores per bestemming en dag">
+              <thead><tr id="compare-head"></tr></thead>
+              <tbody id="compare-body"></tbody>
+            </table>
+          </div>
+          <p class="source-note">Weerdata door Infoplaza · klik op een score voor het volledige weerbericht</p>
+        </div>
+      </section>
       <dialog id="day-weather-dialog" class="day-weather-dialog" aria-labelledby="day-weather-title">
         <form method="dialog" class="dialog-actions">
           <button class="dialog-close" type="submit" aria-label="Sluiten">×</button>

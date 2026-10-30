@@ -395,3 +395,155 @@ currentLocationButton.addEventListener("click", async () => {
     return `/api/forecast?${query}`;
   });
 });
+
+const compareForm = document.querySelector("#compare-form");
+const compareButton = document.querySelector("#compare-button");
+const compareStatus = document.querySelector("#compare-status");
+const compareResults = document.querySelector("#compare-results");
+
+function dayScore(day) {
+  return scoreRideWeather(day.apparentTemperature, day.windSpeed, day.precipProbability, day.precipIntensity, day.precipType);
+}
+
+function average(values) {
+  const finite = values.filter(Number.isFinite);
+  return finite.length ? finite.reduce((sum, value) => sum + value, 0) / finite.length : null;
+}
+
+function scoreClass(score) {
+  return score < 6 ? "is-low" : score < 8 ? "is-medium" : "";
+}
+
+async function fetchCompareForecast(location) {
+  try {
+    const response = await fetch(`/api/forecast?${new URLSearchParams({ location })}`);
+    const data = await response.json();
+    if (!response.ok) return { location, error: data.error || "Niet beschikbaar" };
+    if (!Array.isArray(data.forecast?.daily)) return { location, error: "Niet beschikbaar" };
+    return { location, data };
+  } catch {
+    return { location, error: "Weerdata kon niet worden opgehaald" };
+  }
+}
+
+function renderComparison(entries) {
+  const loaded = entries.filter((entry) => entry.data);
+  const dayCount = Math.max(...loaded.map((entry) => entry.data.forecast.daily.length));
+  const first = loaded[0].data;
+  const firstTimezone = first.forecast.timezone || first.place.timezone || "UTC";
+
+  const headCells = [document.createElement("th")];
+  headCells[0].scope = "col";
+  headCells[0].textContent = "Bestemming";
+  for (let index = 0; index < dayCount; index += 1) {
+    const heading = document.createElement("th");
+    heading.scope = "col";
+    const day = first.forecast.daily[index];
+    heading.textContent = day
+      ? formatDay(day.time, firstTimezone, { weekday: "short", day: "numeric" }).replace(/\.$/, "")
+      : `Dag ${index + 1}`;
+    headCells.push(heading);
+  }
+  for (const label of ["Gem.", "Max °C", "Regen", "Wind"]) {
+    const heading = document.createElement("th");
+    heading.scope = "col";
+    heading.textContent = label;
+    headCells.push(heading);
+  }
+  document.querySelector("#compare-head").replaceChildren(...headCells);
+
+  for (const entry of loaded) {
+    const daily = entry.data.forecast.daily;
+    entry.average = average(daily.map(dayScore));
+  }
+  const best = loaded.reduce((top, entry) => (entry.average > top.average ? entry : top));
+
+  const rows = entries.map((entry) => {
+    const row = document.createElement("tr");
+    const name = document.createElement("th");
+    name.scope = "row";
+    name.className = "compare-place";
+    name.textContent = entry.data ? locationLabel(entry.data.place) : entry.location;
+    row.append(name);
+
+    if (!entry.data) {
+      row.classList.add("is-missing");
+      const cell = document.createElement("td");
+      cell.colSpan = dayCount + 4;
+      cell.className = "compare-error";
+      cell.textContent = entry.error;
+      row.append(cell);
+      return row;
+    }
+
+    if (entry === best && loaded.length > 1) row.classList.add("is-best");
+    const daily = entry.data.forecast.daily;
+    const timezone = entry.data.forecast.timezone || entry.data.place.timezone || "UTC";
+    for (let index = 0; index < dayCount; index += 1) {
+      const cell = document.createElement("td");
+      const day = daily[index];
+      if (day) {
+        const score = dayScore(day);
+        const weekday = formatDay(day.time, timezone, { weekday: "long" });
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `compare-score ${scoreClass(score)}`;
+        button.textContent = String(score);
+        button.title = describeDayWeather(day);
+        button.setAttribute("aria-haspopup", "dialog");
+        button.setAttribute("aria-label", `${name.textContent}, ${weekday}: fietsscore ${score} van 10. Bekijk weerbericht`);
+        button.addEventListener("click", () => openDayWeather(day, timezone));
+        cell.append(button);
+      } else {
+        cell.textContent = "—";
+      }
+      row.append(cell);
+    }
+
+    const avgCell = document.createElement("td");
+    avgCell.className = "compare-average";
+    avgCell.textContent = formatWeatherValue(entry.average, "", 1);
+    const tempCell = document.createElement("td");
+    tempCell.textContent = formatWeatherValue(average(daily.map((day) => day.temperatureHigh)), "°");
+    const rainCell = document.createElement("td");
+    const rain = average(daily.map((day) => day.precipProbability));
+    rainCell.textContent = rain === null ? "—" : formatWeatherValue(rain * 100, "%");
+    const windCell = document.createElement("td");
+    const force = beaufortForce(average(daily.map((day) => day.windSpeed)));
+    windCell.textContent = force === null ? "—" : `Bft ${force}`;
+    row.append(avgCell, tempCell, rainCell, windCell);
+    return row;
+  });
+  document.querySelector("#compare-body").replaceChildren(...rows);
+
+  const winner = document.querySelector("#compare-winner");
+  winner.textContent = loaded.length > 1
+    ? `Beste keuze: ${locationLabel(best.data.place)} met gemiddeld ${formatWeatherValue(best.average, "", 1)} van 10`
+    : `Alleen ${locationLabel(best.data.place)} kon worden geladen.`;
+  compareResults.hidden = false;
+}
+
+compareForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const locations = [...compareForm.querySelectorAll("input[name=compare-location]")].map((field) => field.value.trim());
+  if (locations.some((location) => !location)) return;
+
+  const label = compareButton.querySelector(".button-label");
+  compareButton.disabled = true;
+  label.textContent = "Bezig…";
+  compareStatus.textContent = "";
+  compareStatus.classList.remove("is-error");
+  compareResults.hidden = true;
+  try {
+    const entries = await Promise.all(locations.map(fetchCompareForecast));
+    if (!entries.some((entry) => entry.data)) {
+      compareStatus.textContent = "Geen van de bestemmingen kon worden geladen. Controleer de plaatsnamen.";
+      compareStatus.classList.add("is-error");
+      return;
+    }
+    renderComparison(entries);
+  } finally {
+    compareButton.disabled = false;
+    label.textContent = "Vergelijk";
+  }
+});
