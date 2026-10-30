@@ -207,7 +207,7 @@ const server = http.createServer(async (request, response) => {
         "X-Content-Type-Options": "nosniff",
         "Strict-Transport-Security": "max-age=31536000",
         "Content-Security-Policy": "default-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline' https://unpkg.com/leaflet@1.9.4/; script-src 'self' https://unpkg.com/leaflet@1.9.4/; img-src 'self' data: https://unpkg.com/leaflet@1.9.4/ https://*.tile.openstreetmap.org; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'",
-        "Referrer-Policy": "no-referrer",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
       });
       response.end(content);
     } catch {
