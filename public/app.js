@@ -309,15 +309,23 @@ function renderForecast(data) {
     rainIcon.setAttribute("aria-hidden", "true");
     rainIcon.textContent = "☂";
     rain.append(rainIcon, document.createTextNode(` ${rainProbability ?? "—"}%`));
-    details.append(wind, rain);
+    const temperature = document.createElement("span");
+    temperature.className = "weather-temperature";
+    temperature.textContent = Number.isFinite(dayData.temperatureHigh)
+      ? formatWeatherValue(dayData.temperatureHigh, "°")
+      : "—";
+    details.append(wind, rain, temperature);
     const weekday = formatDay(dayData.time, timezone, { weekday: "long" });
     const accessibleWind = direction
       ? `wind uit het ${direction[1]}`
       : "windrichting onbekend";
     const accessibleForce = force === null ? "windkracht onbekend" : `Beaufort ${force}`;
     const accessibleRain = rainProbability === null ? "regenkans onbekend" : `regenkans ${rainProbability} procent`;
+    const accessibleTemperature = Number.isFinite(dayData.temperatureHigh)
+      ? `maximumtemperatuur ${formatWeatherValue(dayData.temperatureHigh, " graden Celsius")}`
+      : "maximumtemperatuur onbekend";
     const accessibleIntensity = rainIntensity === null ? "neerslagintensiteit onbekend" : `neerslagintensiteit ${rainIntensity} millimeter per uur`;
-    const weatherDescription = `${accessibleWind}, ${accessibleForce}; ${accessibleRain}; ${accessibleIntensity}`;
+    const weatherDescription = `${accessibleWind}, ${accessibleForce}; ${accessibleRain}; ${accessibleTemperature}; ${accessibleIntensity}`;
     cell.setAttribute("aria-label", `${weekday}: ${score} van 10; ${weatherDescription}`);
     cell.title = weatherDescription;
     const content = document.createElement("button");
