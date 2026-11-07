@@ -626,8 +626,9 @@ presetButtons.forEach((button) => {
 
 compareForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const locations = [...compareForm.querySelectorAll("input[name=compare-location]")].map((field) => field.value.trim());
-  if (locations.some((location) => !location)) return;
+  const locations = [...compareForm.querySelectorAll("input[name=compare-location]")].map((field) => field.value.trim())
+    .filter(Boolean);
+  if (locations.length < 2) return;
 
   const label = compareButton.querySelector(".button-label");
   compareButton.disabled = true;
