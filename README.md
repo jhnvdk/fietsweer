@@ -42,3 +42,12 @@ git branch -M main
 git remote add origin https://github.com/jhnvdk/fietsweer.git
 git push -u origin main
 ```
+## iPhone app
+
+The native SwiftUI app lives in [`ios/`](ios/) and uses the same server (`/api/v1/forecast`). Scores are computed on the server in [`lib/scoring.js`](lib/scoring.js), so the website and the app always agree.
+
+- `ios/FietsweerCore`: shared Swift code (API client, models, trip periods). Compile it locally with `swift build`.
+- `ios/Fietsweer`: SwiftUI screens. `ios/project.yml` describes the Xcode project; [XcodeGen](https://github.com/yonaskolb/XcodeGen) generates it, so no `.xcodeproj` is committed.
+- [`.github/workflows/ios.yml`](.github/workflows/ios.yml) runs the tests and builds the app on pull requests. On every push to `main` that touches `ios/`, it also uploads a build to TestFlight. It needs the repository secrets `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` (base64) and `APPLE_TEAM_ID`.
+
+To change the score rules, edit `lib/scoring.js` and deploy the server. Both apps pick up the change without an App Store update. Keep `/api/v1` backwards compatible: only add fields.
