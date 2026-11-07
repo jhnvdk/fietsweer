@@ -2,7 +2,7 @@
 
 A responsive cycling weather app. Choose a place to see cycling scores for the next five days.
 
-Weather data comes from [Infoplaza](https://platform.infoplaza.com/reference/v1-weather-forecast), and location search uses [Open-Meteo](https://open-meteo.com/). The server uses Node.js built-in HTTP and `fetch` APIs.
+Weather data comes from [Infoplaza](https://platform.infoplaza.com/reference/v1-weather-forecast), and location search uses the [Infoplaza Geocoding Search API](https://platform.infoplaza.com/reference/v1-geo-search). The server uses Node.js built-in HTTP and `fetch` APIs.
 
 ## Run locally
 

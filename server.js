@@ -79,19 +79,32 @@ const cleanupInterval = setInterval(() => {
 }, 60_000);
 cleanupInterval.unref();
 
+const normalizeName = (value) => (value || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+
+// The search also returns prefix matches ("Ams" -> "Amsterdam"), already ranked
+// by relevance. Prefer an exact name match; otherwise trust the API's order.
+function pickPlace(results, query) {
+  if (!Array.isArray(results) || results.length === 0) return null;
+  const wanted = normalizeName(query);
+  return results.find((result) => normalizeName(result.name) === wanted) ?? results[0];
+}
+
 async function getForecast(location, coordinates) {
+  const apiKey = process.env.INFOPLAZA_API_KEY;
   let place;
   if (!coordinates) {
-    const geocodingUrl = new URL("https://geocoding-api.open-meteo.com/v1/search");
-    geocodingUrl.search = new URLSearchParams({ count: "1", language: "en", name: location, format: "json" });
+    const geocodingUrl = new URL("https://api.infoplaza.com/v1/geo/search");
+    // Dutch names ("Parijs", "Den Haag") only match the right city with language=nl.
+    geocodingUrl.search = new URLSearchParams({ query: location, language: "nl", api_key: apiKey });
     const geocodingResponse = await fetch(geocodingUrl, { signal: AbortSignal.timeout(10000) });
     if (!geocodingResponse.ok) throw new Error("Location search is temporarily unavailable.");
+    const geocodingPayload = await geocodingResponse.json();
+    if (geocodingPayload.success === false) throw new Error("Location search failed.");
 
-    place = (await geocodingResponse.json()).results?.[0];
+    place = pickPlace(geocodingPayload.data ?? geocodingPayload, location);
     if (!place) return null;
   }
 
-  const apiKey = process.env.INFOPLAZA_API_KEY;
   const latitude = coordinates?.latitude ?? place.latitude;
   const longitude = coordinates?.longitude ?? place.longitude;
 
@@ -115,8 +128,7 @@ async function getForecast(location, coordinates) {
   return {
     place: {
       name: place?.name || forecast.location || `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`,
-      admin1: place?.admin1,
-      country: place?.country || forecast.country,
+      country: place?.country?.name || forecast.country,
       timezone: place?.timezone || forecast.timezone,
     },
     forecast,
