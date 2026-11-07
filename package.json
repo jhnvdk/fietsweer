@@ -2,7 +2,7 @@
   "name": "fietsweer",
   "version": "1.0.0",
   "private": true,
-  "description": "Five-day cycling scores based on Infoplaza weather",
+  "description": "Cycling scores up to 15 days ahead based on Infoplaza weather",
   "scripts": {
     "start": "node --env-file-if-exists=.env server.js",
     "dev": "node --env-file-if-exists=.env --watch server.js",

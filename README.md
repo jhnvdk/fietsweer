@@ -1,6 +1,6 @@
 # Fietsweer
 
-A responsive cycling weather app. Choose a place to see cycling scores for the next five days.
+A responsive cycling weather app. Choose a place to see cycling scores for up to 15 days ahead (scores more than 7 days out are marked as unsure). The comparison lets you pick a period: the next 3 days, this weekend, next week or next weekend.
 
 Weather data comes from [Infoplaza](https://platform.infoplaza.com/reference/v1-weather-forecast), and location search uses the [Infoplaza Geocoding Search API](https://platform.infoplaza.com/reference/v1-geo-search). The server uses Node.js built-in HTTP and `fetch` APIs.
 

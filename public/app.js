@@ -55,6 +55,33 @@ function formatDay(timestamp, timezone, options) {
   return new Intl.DateTimeFormat("nl-NL", { ...options, timeZone: timezone }).format(new Date(timestamp * 1000));
 }
 
+// Dates as "YYYY-MM-DD" strings in a given timezone, so days line up across places.
+const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Amsterdam";
+const uncertainAfterDays = 7;
+
+function dateKey(timestamp, timezone) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" })
+    .format(new Date(timestamp * 1000));
+}
+
+function addDays(key, days) {
+  const date = new Date(`${key}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function daysBetween(fromKey, toKey) {
+  return Math.round((Date.parse(`${toKey}T00:00:00Z`) - Date.parse(`${fromKey}T00:00:00Z`)) / 86_400_000);
+}
+
+function todayKey() {
+  return dateKey(Date.now() / 1000, userTimezone);
+}
+
+function isUncertain(day, timezone) {
+  return daysBetween(todayKey(), dateKey(day.time, timezone)) > uncertainAfterDays;
+}
+
 function locationLabel(place) {
   return [place.name, place.admin1, place.country]
     .filter((part, index, parts) => part && parts.indexOf(part) === index)
@@ -226,9 +253,9 @@ async function loadOverviewForecasts() {
   overviewMapDay.replaceChildren(...firstForecast.daily.map((day, index) => {
     const option = document.createElement("option");
     option.value = String(index);
-    option.textContent = formatDay(day.time, firstForecast.timezone || activeMapCountry.timezone, {
-      weekday: "short", day: "numeric", month: "short",
-    });
+    const timezone = firstForecast.timezone || activeMapCountry.timezone;
+    option.textContent = formatDay(day.time, timezone, { weekday: "short", day: "numeric", month: "short" })
+      + (isUncertain(day, timezone) ? " (onzeker)" : "");
     return option;
   }));
   overviewMapDay.disabled = false;
@@ -279,10 +306,13 @@ function renderForecast(data) {
   const dayHeadings = daily.map((dayData) => {
     const heading = document.createElement("th");
     heading.scope = "col";
-    heading.textContent = formatDay(dayData.time, timezone, { weekday: "short" }).replace(/\.$/, "");
+    heading.textContent = formatDay(dayData.time, timezone, { weekday: "short", day: "numeric" }).replace(/\.$/, "");
+    if (isUncertain(dayData, timezone)) heading.classList.add("is-uncertain");
     return heading;
   });
   document.querySelector("#score-days").replaceChildren(...dayHeadings);
+  document.querySelector(".activity-table").style.setProperty("--days", String(daily.length));
+  document.querySelector("#forecast-uncertain-note").hidden = !daily.some((dayData) => isUncertain(dayData, timezone));
   const scores = daily.map((dayData) => {
     const score = scoreRideWeather(dayData.apparentTemperature, dayData.windSpeed, dayData.precipProbability, dayData.precipIntensity, dayData.precipType);
     const cell = document.createElement("td");
@@ -315,7 +345,9 @@ function renderForecast(data) {
       ? formatWeatherValue(dayData.temperatureHigh, "°")
       : "—";
     details.append(wind, rain, temperature);
-    const weekday = formatDay(dayData.time, timezone, { weekday: "long" });
+    const uncertain = isUncertain(dayData, timezone);
+    if (uncertain) cell.classList.add("is-uncertain");
+    const weekday = `${formatDay(dayData.time, timezone, { weekday: "long", day: "numeric", month: "long" })}${uncertain ? " (onzeker)" : ""}`;
     const accessibleWind = direction
       ? `wind uit het ${direction[1]}`
       : "windrichting onbekend";
@@ -434,22 +466,76 @@ async function fetchCompareForecast(location) {
   }
 }
 
-function renderComparison(entries) {
+// Trip-period presets. Each returns an inclusive [start, end] range of date keys.
+const comparePresets = {
+  next3: { label: "de komende 3 dagen", range: (today) => [today, addDays(today, 2)] },
+  weekend: {
+    label: "komend weekend",
+    range: (today, weekday) => {
+      if (weekday === 0) return [today, today];
+      const saturday = addDays(today, 6 - weekday);
+      return [saturday, addDays(saturday, 1)];
+    },
+  },
+  nextWeek: {
+    label: "volgende week",
+    range: (today, weekday) => {
+      const monday = addDays(today, ((8 - weekday) % 7) || 7);
+      return [monday, addDays(monday, 6)];
+    },
+  },
+  nextWeekend: {
+    label: "volgend weekend",
+    range: (today, weekday) => {
+      const comingSaturday = addDays(today, weekday === 0 ? -1 : 6 - weekday);
+      return [addDays(comingSaturday, 7), addDays(comingSaturday, 8)];
+    },
+  },
+};
+const presetButtons = [...document.querySelectorAll(".compare-preset")];
+let activePreset = "next3";
+let lastCompareEntries = null;
+
+function presetDateKeys(presetKey) {
+  const today = todayKey();
+  const weekday = new Date(`${today}T00:00:00Z`).getUTCDay();
+  const [start, end] = comparePresets[presetKey].range(today, weekday);
+  return Array.from({ length: daysBetween(start, end) + 1 }, (_, index) => addDays(start, index));
+}
+
+function daysByDate(entry) {
+  const timezone = entry.data.forecast.timezone || entry.data.place.timezone || "UTC";
+  return new Map(entry.data.forecast.daily.map((day) => [dateKey(day.time, timezone), day]));
+}
+
+function renderComparison(entries, presetKey) {
   const loaded = entries.filter((entry) => entry.data);
-  const dayCount = Math.max(...loaded.map((entry) => entry.data.forecast.daily.length));
-  const first = loaded[0].data;
-  const firstTimezone = first.forecast.timezone || first.place.timezone || "UTC";
+  const keys = presetDateKeys(presetKey);
+  const periodLabel = comparePresets[presetKey].label;
+  for (const entry of loaded) {
+    entry.timezone = entry.data.forecast.timezone || entry.data.place.timezone || "UTC";
+    const byDate = daysByDate(entry);
+    entry.days = keys.map((key) => byDate.get(key));
+    entry.periodDays = entry.days.filter(Boolean);
+    entry.average = average(entry.periodDays.map(dayScore));
+  }
+  const scored = loaded.filter((entry) => entry.average !== null);
+  if (scored.length === 0) {
+    compareResults.hidden = true;
+    compareStatus.textContent = `Er is nog geen weerbericht voor ${periodLabel}.`;
+    return;
+  }
+  compareStatus.textContent = "";
 
   const headCells = [document.createElement("th")];
   headCells[0].scope = "col";
   headCells[0].textContent = "Bestemming";
-  for (let index = 0; index < dayCount; index += 1) {
+  for (const key of keys) {
     const heading = document.createElement("th");
     heading.scope = "col";
-    const day = first.forecast.daily[index];
-    heading.textContent = day
-      ? formatDay(day.time, firstTimezone, { weekday: "short", day: "numeric" }).replace(/\.$/, "")
-      : `Dag ${index + 1}`;
+    heading.textContent = new Intl.DateTimeFormat("nl-NL", { weekday: "short", day: "numeric", timeZone: "UTC" })
+      .format(new Date(`${key}T12:00:00Z`)).replace(/\.$/, "");
+    if (daysBetween(todayKey(), key) > uncertainAfterDays) heading.classList.add("is-uncertain");
     headCells.push(heading);
   }
   for (const label of ["Gem.", "Max °C", "Regen", "Wind"]) {
@@ -460,11 +546,8 @@ function renderComparison(entries) {
   }
   document.querySelector("#compare-head").replaceChildren(...headCells);
 
-  for (const entry of loaded) {
-    const daily = entry.data.forecast.daily;
-    entry.average = average(daily.map(dayScore));
-  }
-  const best = loaded.reduce((top, entry) => (entry.average > top.average ? entry : top));
+  const best = scored.reduce((top, entry) => (entry.average > top.average ? entry : top));
+  let hasUncertain = false;
 
   const rows = entries.map((entry) => {
     const row = document.createElement("tr");
@@ -477,30 +560,29 @@ function renderComparison(entries) {
     if (!entry.data) {
       row.classList.add("is-missing");
       const cell = document.createElement("td");
-      cell.colSpan = dayCount + 4;
+      cell.colSpan = keys.length + 4;
       cell.className = "compare-error";
       cell.textContent = entry.error;
       row.append(cell);
       return row;
     }
 
-    if (entry === best && loaded.length > 1) row.classList.add("is-best");
-    const daily = entry.data.forecast.daily;
-    const timezone = entry.data.forecast.timezone || entry.data.place.timezone || "UTC";
-    for (let index = 0; index < dayCount; index += 1) {
+    if (entry === best && scored.length > 1) row.classList.add("is-best");
+    for (const day of entry.days) {
       const cell = document.createElement("td");
-      const day = daily[index];
       if (day) {
         const score = dayScore(day);
-        const weekday = formatDay(day.time, timezone, { weekday: "long" });
+        const uncertain = isUncertain(day, entry.timezone);
+        if (uncertain) hasUncertain = true;
+        const weekday = formatDay(day.time, entry.timezone, { weekday: "long", day: "numeric", month: "long" });
         const button = document.createElement("button");
         button.type = "button";
-        button.className = `compare-score ${scoreClass(score)}`;
+        button.className = `compare-score ${scoreClass(score)}${uncertain ? " is-uncertain" : ""}`;
         button.textContent = String(score);
-        button.title = describeDayWeather(day);
+        button.title = `${describeDayWeather(day)}${uncertain ? " (onzeker)" : ""}`;
         button.setAttribute("aria-haspopup", "dialog");
-        button.setAttribute("aria-label", `${name.textContent}, ${weekday}: fietsscore ${score} van 10. Bekijk weerbericht`);
-        button.addEventListener("click", () => openDayWeather(day, timezone));
+        button.setAttribute("aria-label", `${name.textContent}, ${weekday}: fietsscore ${score} van 10${uncertain ? ", onzeker" : ""}. Bekijk weerbericht`);
+        button.addEventListener("click", () => openDayWeather(day, entry.timezone));
         cell.append(button);
       } else {
         cell.textContent = "—";
@@ -508,11 +590,13 @@ function renderComparison(entries) {
       row.append(cell);
     }
 
+    const daily = entry.periodDays;
     const avgCell = document.createElement("td");
     avgCell.className = "compare-average";
-    avgCell.textContent = formatWeatherValue(entry.average, "", 1);
+    avgCell.textContent = entry.average === null ? "—" : formatWeatherValue(entry.average, "", 1);
     const tempCell = document.createElement("td");
-    tempCell.textContent = formatWeatherValue(average(daily.map((day) => day.temperatureHigh)), "°");
+    const temperature = average(daily.map((day) => day.temperatureHigh));
+    tempCell.textContent = temperature === null ? "—" : formatWeatherValue(temperature, "°");
     const rainCell = document.createElement("td");
     const rain = average(daily.map((day) => day.precipProbability));
     rainCell.textContent = rain === null ? "—" : formatWeatherValue(rain * 100, "%");
@@ -523,13 +607,22 @@ function renderComparison(entries) {
     return row;
   });
   document.querySelector("#compare-body").replaceChildren(...rows);
+  document.querySelector("#compare-uncertain-note").hidden = !hasUncertain;
 
   const winner = document.querySelector("#compare-winner");
-  winner.textContent = loaded.length > 1
-    ? `Beste keuze: ${locationLabel(best.data.place)} met gemiddeld ${formatWeatherValue(best.average, "", 1)} van 10`
-    : `Alleen ${locationLabel(best.data.place)} kon worden geladen.`;
+  winner.textContent = scored.length > 1
+    ? `Beste keuze voor ${periodLabel}: ${locationLabel(best.data.place)} met gemiddeld ${formatWeatherValue(best.average, "", 1)} van 10`
+    : `Alleen ${locationLabel(best.data.place)} heeft een weerbericht voor ${periodLabel}.`;
   compareResults.hidden = false;
 }
+
+presetButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    activePreset = button.dataset.preset;
+    presetButtons.forEach((presetButton) => presetButton.setAttribute("aria-checked", String(presetButton === button)));
+    if (lastCompareEntries) renderComparison(lastCompareEntries, activePreset);
+  });
+});
 
 compareForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -545,11 +638,13 @@ compareForm.addEventListener("submit", async (event) => {
   try {
     const entries = await Promise.all(locations.map(fetchCompareForecast));
     if (!entries.some((entry) => entry.data)) {
+      lastCompareEntries = null;
       compareStatus.textContent = "Geen van de bestemmingen kon worden geladen. Controleer de plaatsnamen.";
       compareStatus.classList.add("is-error");
       return;
     }
-    renderComparison(entries);
+    lastCompareEntries = entries;
+    renderComparison(entries, activePreset);
   } finally {
     compareButton.disabled = false;
     label.textContent = "Vergelijk";

@@ -114,7 +114,7 @@ async function getForecast(location, coordinates) {
     lon: String(longitude),
     api_key: apiKey,
     units: "metric",
-    max_daily: "5",
+    max_daily: "15",
     language: "en",
   });
   const forecastResponse = await fetch(forecastUrl, { signal: AbortSignal.timeout(10000) });
