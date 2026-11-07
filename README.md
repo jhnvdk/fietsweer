@@ -4,6 +4,53 @@ A responsive cycling weather app. Choose a place to see cycling scores for up to
 
 Weather data comes from [Infoplaza](https://platform.infoplaza.com/reference/v1-weather-forecast), and location search uses the [Infoplaza Geocoding Search API](https://platform.infoplaza.com/reference/v1-geo-search). The server uses Node.js built-in HTTP and `fetch` APIs.
 
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Users
+    web["Browser<br/>(public/ web app)"]
+    ios["iPhone app<br/>(SwiftUI + FietsweerCore)"]
+  end
+
+  subgraph Fly["Fly.io · app fietsweer · ams"]
+    server["server.js<br/>/api/forecast · /api/v1/forecast<br/>lib/scoring.js · 10-min cache"]
+  end
+
+  subgraph Infoplaza
+    geo["Geocoding API<br/>/v1/geo/search"]
+    wx["Forecast API<br/>/v1/weather/forecast"]
+  end
+
+  subgraph GitHub
+    repo["jhnvdk/fietsweer<br/>main branch"]
+    ci["Actions: ios.yml<br/>test · archive · sign"]
+  end
+
+  subgraph Apple["Apple"]
+    asc["App Store Connect<br/>TestFlight · App Review"]
+    store["App Store"]
+  end
+
+  dev(["Developer Mac"])
+
+  web -- "HTTPS JSON" --> server
+  ios -- "HTTPS JSON" --> server
+  server -- "API key (Fly secret)" --> geo
+  server --> wx
+
+  dev -- "git push" --> repo
+  dev -- "fly deploy" --> server
+  repo -- "push to main touching ios/" --> ci
+  ci -- "upload build (ASC API key)" --> asc
+  asc -- "after review + release" --> store
+  store -. "install / update" .-> ios
+```
+
+- **Runtime:** the website and the iPhone app both call the same server on Fly.io. The server looks up places and forecasts at Infoplaza, computes the cycling scores, and caches results for 10 minutes. The Infoplaza key lives only on the server.
+- **Server releases:** `fly deploy` from your machine. No App Store update is needed for scoring changes.
+- **App releases:** a push to `main` that touches `ios/` makes GitHub Actions build, sign and upload a TestFlight build. You then pick that build in App Store Connect and submit it for review.
+
 ## Run locally
 
 Requires Node.js 20.18 or newer.
