@@ -25,6 +25,7 @@ flowchart LR
   subgraph GitHub
     repo["jhnvdk/fietsweer<br/>main branch"]
     ci["Actions: ios.yml<br/>test · archive · sign"]
+    flyapp["Fly.io GitHub app"]
   end
 
   subgraph Apple["Apple"]
@@ -40,7 +41,8 @@ flowchart LR
   server --> wx
 
   dev -- "git push" --> repo
-  dev -- "fly deploy" --> server
+  repo -- "every push to main" --> flyapp
+  flyapp -- "build Dockerfile + deploy" --> server
   repo -- "push to main touching ios/" --> ci
   ci -- "upload build (ASC API key)" --> asc
   asc -- "after review + release" --> store
@@ -48,7 +50,7 @@ flowchart LR
 ```
 
 - **Runtime:** the website and the iPhone app both call the same server on Fly.io. The server looks up places and forecasts at Infoplaza, computes the cycling scores, and caches results for 10 minutes. The Infoplaza key lives only on the server.
-- **Server releases:** `fly deploy` from your machine. No App Store update is needed for scoring changes.
+- **Server releases:** the Fly.io GitHub app deploys every push to `main` automatically. Scoring changes go live without an App Store update.
 - **App releases:** a push to `main` that touches `ios/` makes GitHub Actions build, sign and upload a TestFlight build. You then pick that build in App Store Connect and submit it for review.
 
 ## Run locally
@@ -69,11 +71,7 @@ Run the syntax checks with `npm run check`.
 
 ## Deploy to Fly.io
 
-Install and sign in to the [Fly CLI](https://fly.io/docs/flyctl/install/), then deploy from this directory:
-
-```sh
-fly deploy
-```
+The Fly.io GitHub app deploys every push to `main` automatically. To deploy by hand instead, install and sign in to the [Fly CLI](https://fly.io/docs/flyctl/install/) and run `fly deploy` from this directory.
 
 The included `fly.toml` targets the existing app `fietsweer` in the Amsterdam region. Fly builds the included Dockerfile and injects its configured secrets at runtime.
 
