@@ -4,10 +4,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#1b1d2c">
-    <meta name="description" content="Bekijk de fietsscore voor de komende vijf dagen op basis van je locatie.">
+    <meta name="description" content="Bekijk de fietsscore tot 15 dagen vooruit op basis van je locatie.">
     <title>Fietsweer | Activiteiten</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
     <link rel="stylesheet" href="/styles.css">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
     <script src="/app.js" defer></script>
   </head>
@@ -49,7 +52,7 @@
           </table>
         </div>
         <p id="forecast-uncertain-note" class="uncertain-note" hidden>Vervaagde scores liggen meer dan 7 dagen vooruit en zijn onzeker.</p>
-        <p class="source-note">Weerdata door Infoplaza</p>
+        <p class="source-note">Weerdata door Infoplaza · <a href="/privacy">Privacy</a></p>
       </section>
       <section class="compare-panel" aria-labelledby="compare-title">
         <h2 id="compare-title" class="compare-title">Vergelijk twee of drie bestemmingen</h2>

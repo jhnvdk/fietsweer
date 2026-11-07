@@ -1,13 +1,15 @@
 const http = require("node:http");
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const { enrichForecast } = require("./lib/scoring");
 
 const port = Number(process.env.PORT) || 8080;
 const publicDirectory = path.join(__dirname, "public");
 const rateLimits = new Map();
 const forecastCache = new Map();
 const rateLimitWindowMs = 60_000;
-const rateLimitMaxRequests = 30;
+// Mobile carriers share IP addresses, and the map view loads 12 places at once.
+const rateLimitMaxRequests = 60;
 const rateLimitMaxEntries = 10_000;
 const forecastCacheTtlMs = 10 * 60_000;
 const forecastCacheMaxEntries = 1_000;
@@ -15,7 +17,12 @@ const mimeTypes = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".webmanifest": "application/manifest+json",
 };
+// Clean URLs for pages linked from the App Store listing.
+const pageAliases = { "/": "/index.html", "/privacy": "/privacy.html" };
 
 function allowForecastRequest(clientIp, now = Date.now()) {
   const entry = rateLimits.get(clientIp);
@@ -153,7 +160,14 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
-    if (requestUrl.pathname === "/api/forecast") {
+    if (requestUrl.pathname === "/api/health") {
+      sendJson(response, 200, { ok: true });
+      return;
+    }
+
+    // /api/v1/forecast is the stable route for the iOS app; /api/forecast stays for the web app.
+    // Only ever add fields to this response: older app versions stay installed for months.
+    if (requestUrl.pathname === "/api/forecast" || requestUrl.pathname === "/api/v1/forecast") {
       const clientIp = request.headers["fly-client-ip"]?.trim() || request.socket.remoteAddress || "unknown";
       if (!allowForecastRequest(clientIp)) {
         sendJson(response, 429, { error: "Too many forecast requests. Please try again shortly." });
@@ -187,7 +201,7 @@ const server = http.createServer(async (request, response) => {
       const cacheKey = forecastCacheKey(location, coordinates);
       const cachedResult = getCachedForecast(cacheKey);
       if (cachedResult) {
-        sendJson(response, 200, cachedResult);
+        sendJson(response, 200, enrichForecast(cachedResult));
         return;
       }
       try {
@@ -197,7 +211,7 @@ const server = http.createServer(async (request, response) => {
           return;
         }
         cacheForecast(cacheKey, result);
-        sendJson(response, 200, result);
+        sendJson(response, 200, enrichForecast(result));
       } catch (error) {
         console.error("Forecast request failed:", error.message);
         sendJson(response, 502, { error: "Weather data could not be reached. Please try again." });
@@ -205,7 +219,7 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
-    const requestedPath = requestUrl.pathname === "/" ? "/index.html" : requestUrl.pathname;
+    const requestedPath = pageAliases[requestUrl.pathname] || requestUrl.pathname;
     const filePath = path.resolve(publicDirectory, `.${requestedPath}`);
     if (filePath !== publicDirectory && !filePath.startsWith(`${publicDirectory}${path.sep}`)) {
       response.writeHead(404);

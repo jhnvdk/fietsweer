@@ -66,6 +66,7 @@ button, input { font: inherit; }
  .weather-details { display: grid; justify-items: center; gap: 3px; color: var(--muted); font-size: 11px; line-height: 1.2; white-space: nowrap; }
  .weather-rain { display: inline-flex; align-items: center; gap: 3px; }
  .source-note { margin: 14px 0 0; color: var(--muted); font-size: 11px; text-align: right; }
+ .source-note a { color: inherit; }
 .day-weather-dialog { width: min(520px, calc(100% - 32px)); max-height: min(80vh, 720px); overflow: auto; padding: 22px; color: var(--ink); background: var(--panel); border: 1px solid #484c5d; border-radius: 12px; }
 .day-weather-dialog::backdrop { background: rgb(8 10 18 / 72%); }
 .dialog-actions { display: flex; justify-content: flex-end; margin: -8px -8px 8px; }

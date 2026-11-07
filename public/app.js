@@ -78,10 +78,6 @@ function todayKey() {
   return dateKey(Date.now() / 1000, userTimezone);
 }
 
-function isUncertain(day, timezone) {
-  return daysBetween(todayKey(), dateKey(day.time, timezone)) > uncertainAfterDays;
-}
-
 function locationLabel(place) {
   return [place.name, place.admin1, place.country]
     .filter((part, index, parts) => part && parts.indexOf(part) === index)
@@ -115,22 +111,12 @@ function formatWeatherValue(value, suffix = "", digits = 0) {
   return `${new Intl.NumberFormat("nl-NL", { maximumFractionDigits: digits }).format(value)}${suffix}`;
 }
 
-function describeDayWeather(day) {
-  const precipitation = day.precipType === "snow" ? "Sneeuw" : day.precipType === "sleet" ? "Natte sneeuw" : day.precipType === "hail" ? "Hagel" : "Regen";
-  if (day.precipProbability >= 0.6 && day.precipIntensity >= 1) return `${precipitation} verwacht`;
-  if (day.precipProbability >= 0.3 && day.precipIntensity > 0) return `${precipitation} mogelijk`;
-  if (day.cloudCover >= 0.8) return "Overwegend bewolkt";
-  if (day.cloudCover >= 0.45) return "Gedeeltelijk bewolkt";
-  if (day.cloudCover >= 0.15) return "Licht bewolkt";
-  return "Overwegend zonnig";
-}
-
 function openDayWeather(day, timezone) {
   const direction = windDirection(day.windBearing);
   const force = beaufortForce(day.windSpeed);
   const title = formatDay(day.time, timezone, { weekday: "long", day: "numeric", month: "long" });
   document.querySelector("#day-weather-title").textContent = title;
-  document.querySelector("#day-weather-summary").textContent = describeDayWeather(day);
+  document.querySelector("#day-weather-summary").textContent = day.summary;
 
   const metrics = [
     ["Maximumtemperatuur", formatWeatherValue(day.temperatureHigh, " °C")],
@@ -160,20 +146,6 @@ function openDayWeather(day, timezone) {
   dayWeatherDialog.showModal();
 }
 
-function scoreRideWeather(temperature, wind, rainProbability, rainIntensity, precipType) {
-  let penalty = temperature < 10 || temperature > 32 ? 3
-    : temperature < 14 || temperature > 28 ? 2
-      : temperature < 16 || temperature > 24 ? 1
-        : 0;
-  penalty += Math.round(Math.min(4, 3 * rainProbability + 1.5 * Math.min(rainIntensity / 2, 1)));
-
-  let windPenalty = wind >= 35 ? 3 : wind >= 25 ? 2 : wind >= 15 ? 1 : 0;
-  if (["snow", "sleet", "hail"].includes(precipType) && (rainProbability >= 0.2 || rainIntensity > 0.1)) penalty += 2;
-  if (temperature <= 0 && rainIntensity > 0.1) penalty += 1;
-  penalty += windPenalty;
-  return Math.max(1, Math.min(10, 10 - penalty));
-}
-
 function initializeOverviewMap() {
   overviewMap = L.map(overviewMapElement, { scrollWheelZoom: false }).setView([51.5, 5], 6);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -197,7 +169,7 @@ function updateOverviewMapMarkers(dayIndex) {
     const data = overviewForecasts.get(`${activeMapCountryKey}:${capital.province}`);
     const day = data?.forecast.daily[dayIndex];
     if (!day) continue;
-    const score = scoreRideWeather(day.apparentTemperature, day.windSpeed, day.precipProbability, day.precipIntensity, day.precipType);
+    const score = day.score;
     if (!Number.isFinite(score)) continue;
     const scoreClass = score < 6 ? "is-low" : score < 8 ? "is-medium" : "";
     const marker = L.marker([capital.latitude, capital.longitude], {
@@ -215,7 +187,7 @@ function updateOverviewMapMarkers(dayIndex) {
     const scoreText = document.createElement("p");
     scoreText.textContent = `Fietsscore ${score} van 10 · ${selectedDate}`;
     const weatherText = document.createElement("p");
-    weatherText.textContent = `${describeDayWeather(day)} · maximaal ${formatWeatherValue(day.temperatureHigh, " °C")}`;
+    weatherText.textContent = `${day.summary} · maximaal ${formatWeatherValue(day.temperatureHigh, " °C")}`;
     popup.append(heading, scoreText, weatherText);
     marker.bindPopup(popup).addTo(overviewMapMarkers);
   }
@@ -255,7 +227,7 @@ async function loadOverviewForecasts() {
     option.value = String(index);
     const timezone = firstForecast.timezone || activeMapCountry.timezone;
     option.textContent = formatDay(day.time, timezone, { weekday: "short", day: "numeric", month: "short" })
-      + (isUncertain(day, timezone) ? " (onzeker)" : "");
+      + (day.uncertain ? " (onzeker)" : "");
     return option;
   }));
   overviewMapDay.disabled = false;
@@ -307,14 +279,14 @@ function renderForecast(data) {
     const heading = document.createElement("th");
     heading.scope = "col";
     heading.textContent = formatDay(dayData.time, timezone, { weekday: "short", day: "numeric" }).replace(/\.$/, "");
-    if (isUncertain(dayData, timezone)) heading.classList.add("is-uncertain");
+    if (dayData.uncertain) heading.classList.add("is-uncertain");
     return heading;
   });
   document.querySelector("#score-days").replaceChildren(...dayHeadings);
   document.querySelector(".activity-table").style.setProperty("--days", String(daily.length));
-  document.querySelector("#forecast-uncertain-note").hidden = !daily.some((dayData) => isUncertain(dayData, timezone));
+  document.querySelector("#forecast-uncertain-note").hidden = !daily.some((dayData) => dayData.uncertain);
   const scores = daily.map((dayData) => {
-    const score = scoreRideWeather(dayData.apparentTemperature, dayData.windSpeed, dayData.precipProbability, dayData.precipIntensity, dayData.precipType);
+    const score = dayData.score;
     const cell = document.createElement("td");
     const value = document.createElement("strong");
     value.className = "score-value";
@@ -345,7 +317,7 @@ function renderForecast(data) {
       ? formatWeatherValue(dayData.temperatureHigh, "°")
       : "—";
     details.append(wind, rain, temperature);
-    const uncertain = isUncertain(dayData, timezone);
+    const uncertain = dayData.uncertain;
     if (uncertain) cell.classList.add("is-uncertain");
     const weekday = `${formatDay(dayData.time, timezone, { weekday: "long", day: "numeric", month: "long" })}${uncertain ? " (onzeker)" : ""}`;
     const accessibleWind = direction
@@ -442,7 +414,7 @@ const compareStatus = document.querySelector("#compare-status");
 const compareResults = document.querySelector("#compare-results");
 
 function dayScore(day) {
-  return scoreRideWeather(day.apparentTemperature, day.windSpeed, day.precipProbability, day.precipIntensity, day.precipType);
+  return day.score;
 }
 
 function average(values) {
@@ -572,14 +544,14 @@ function renderComparison(entries, presetKey) {
       const cell = document.createElement("td");
       if (day) {
         const score = dayScore(day);
-        const uncertain = isUncertain(day, entry.timezone);
+        const uncertain = day.uncertain;
         if (uncertain) hasUncertain = true;
         const weekday = formatDay(day.time, entry.timezone, { weekday: "long", day: "numeric", month: "long" });
         const button = document.createElement("button");
         button.type = "button";
         button.className = `compare-score ${scoreClass(score)}${uncertain ? " is-uncertain" : ""}`;
         button.textContent = String(score);
-        button.title = `${describeDayWeather(day)}${uncertain ? " (onzeker)" : ""}`;
+        button.title = `${day.summary}${uncertain ? " (onzeker)" : ""}`;
         button.setAttribute("aria-haspopup", "dialog");
         button.setAttribute("aria-label", `${name.textContent}, ${weekday}: fietsscore ${score} van 10${uncertain ? ", onzeker" : ""}. Bekijk weerbericht`);
         button.addEventListener("click", () => openDayWeather(day, entry.timezone));
