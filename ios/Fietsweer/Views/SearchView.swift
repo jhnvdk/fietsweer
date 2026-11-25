@@ -3,7 +3,6 @@ import SwiftUI
 
 /// Main screen: pick a place, see the cycling score for up to 15 days.
 struct SearchView: View {
-    @AppStorage("lastLocation") private var lastLocation = ""
     @State private var query = ""
     @State private var result: ForecastResponse?
     @State private var errorMessage: String?
@@ -46,17 +45,12 @@ struct SearchView: View {
                 Task { await load(location: query) }
             }
             .refreshable {
-                if let name = result?.place.name ?? (lastLocation.isEmpty ? nil : lastLocation) {
+                if let name = result?.place.name {
                     await load(location: name)
                 }
             }
             .sheet(item: $selectedDay) { day in
                 DayDetailSheet(day: day, timeZone: result?.timeZone ?? .current)
-            }
-            .task {
-                if result == nil, !lastLocation.isEmpty {
-                    await load(location: lastLocation)
-                }
             }
         }
     }
@@ -65,7 +59,6 @@ struct SearchView: View {
         let location = location.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !location.isEmpty else { return }
         await run { try await client.forecast(location: location) }
-        if result != nil { lastLocation = location }
     }
 
     private func loadCurrentLocation() async {
