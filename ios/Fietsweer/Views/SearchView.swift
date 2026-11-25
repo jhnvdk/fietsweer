@@ -40,7 +40,7 @@ struct SearchView: View {
             }
             .background(Theme.background)
             .navigationTitle("Fietsweer")
-            .searchable(text: $query, prompt: "Plaats of stad")
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Plaats of stad")
             .onSubmit(of: .search) {
                 Task { await load(location: query) }
             }
